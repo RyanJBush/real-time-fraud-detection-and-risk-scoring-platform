@@ -1,25 +1,15 @@
-.PHONY: backend-install backend-run backend-test frontend-install frontend-run frontend-build up down
-
-backend-install:
-	cd backend && pip install -r requirements.txt
-
-backend-run:
-	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+.PHONY: backend-test backend-lint frontend-lint frontend-build check
 
 backend-test:
-	cd backend && pytest
+	cd backend && python -m pytest -q
 
-frontend-install:
-	cd frontend && npm install
+backend-lint:
+	cd backend && python -m ruff check .
 
-frontend-run:
-	cd frontend && npm run dev
+frontend-lint:
+	cd frontend && npm run lint
 
 frontend-build:
 	cd frontend && npm run build
 
-up:
-	docker compose up --build
-
-down:
-	docker compose down -v
+check: backend-lint backend-test frontend-lint frontend-build
