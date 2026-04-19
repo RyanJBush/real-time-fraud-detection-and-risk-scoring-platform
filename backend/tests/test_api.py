@@ -1,0 +1,63 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+@pytest.fixture
+def client() -> TestClient:
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+def auth_headers(client: TestClient, email: str, password: str) -> dict[str, str]:
+    token = client.post("/api/auth/login", json={"email": email, "password": password}).json()[
+        "access_token"
+    ]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_health(client: TestClient) -> None:
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_login_and_me(client: TestClient) -> None:
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "admin@meridian.ai", "password": "password123"},
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+
+    me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    assert me.json()["role"] == "Admin"
+
+
+def test_transaction_scoring_flow(client: TestClient) -> None:
+    headers = auth_headers(client, "analyst@meridian.ai", "password123")
+
+    created = client.post(
+        "/api/transactions",
+        headers=headers,
+        json={"amount": 12000, "merchant": "luxury-goods", "country": "US", "card_last4": "1234"},
+    )
+    assert created.status_code == 200
+    tx_id = created.json()["id"]
+
+    scored = client.post("/api/scores", headers=headers, json={"transaction_id": tx_id})
+    assert scored.status_code == 200
+    assert scored.json()["decision"] in {"decline", "review", "approve"}
+
+    fetched = client.get(f"/api/scores/{tx_id}", headers=headers)
+    assert fetched.status_code == 200
+
+    explanation = client.get(f"/api/explanations/{tx_id}", headers=headers)
+    assert explanation.status_code == 200
+    assert explanation.json()["top_factors"]
+
+    metrics = client.get("/api/metrics/summary", headers=headers)
+    assert metrics.status_code == 200
+    assert metrics.json()["scored_transactions"] >= 1
