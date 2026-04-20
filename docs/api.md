@@ -1,13 +1,28 @@
 # API Surface
 
+## Auth
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+
 ## Transactions
-- `POST /api/v1/transactions/ingest`: ingest transaction, engineer features, score fraud risk, apply rules, and persist decision.
-- `GET /api/v1/transactions?limit=50`: list recent transactions.
+- `POST /api/transactions`
+- `GET /api/transactions`
+- `GET /api/transactions/{transaction_id}`
 
-## Scoring
-- `POST /api/v1/scoring`: re-score existing transaction by `transaction_id` using stored feature vector.
+## Scoring + Explainability
+- `POST /api/scores`
+- `GET /api/scores/{transaction_id}`
+- `GET /api/explanations/{transaction_id}`
 
-## Explanations
-- `GET /api/v1/explanations/{transaction_id}`: retrieve stored SHAP top-feature contributions for a scored transaction.
+## Review Workflow
+- `GET /api/reviews/queue?status=pending|resolved|all`
+- `POST /api/reviews/{transaction_id}/decision`
+- `GET /api/reviews/{transaction_id}/history`
+
+## Metrics
+- `GET /api/metrics/summary`
+
+## Simulations
+- `POST /api/simulations/seed-scenarios`
 
 Use `/docs` on the backend server for Swagger UI.
