@@ -38,6 +38,20 @@ class RiskScore(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class DecisionTrace(Base):
+    __tablename__ = "decision_traces"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    transaction_id: Mapped[int] = mapped_column(ForeignKey("transactions.id"), unique=True, index=True)
+    combined_score: Mapped[float] = mapped_column(Float)
+    decision: Mapped[str] = mapped_column(String(32))
+    reason_codes: Mapped[str] = mapped_column(Text)
+    signal_details: Mapped[str] = mapped_column(Text)
+    group_key: Mapped[str] = mapped_column(String(128), index=True)
+    model_version: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class Rule(Base):
     __tablename__ = "rules"
 
@@ -54,4 +68,44 @@ class Explanation(Base):
     transaction_id: Mapped[int] = mapped_column(ForeignKey("transactions.id"), unique=True)
     shap_values: Mapped[str] = mapped_column(Text)
     top_factors: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ReviewCase(Base):
+    __tablename__ = "review_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    transaction_id: Mapped[int] = mapped_column(ForeignKey("transactions.id"), unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending")
+    initial_decision: Mapped[str] = mapped_column(String(32))
+    final_decision: Mapped[str] = mapped_column(String(32))
+    assigned_to: Mapped[str] = mapped_column(String(255), default="")
+    analyst_notes: Mapped[str] = mapped_column(Text, default="")
+    model_version: Mapped[str] = mapped_column(String(64))
+    explanation_summary: Mapped[str] = mapped_column(Text)
+    reason_codes: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ReviewEvent(Base):
+    __tablename__ = "review_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    review_case_id: Mapped[int] = mapped_column(ForeignKey("review_cases.id"), index=True)
+    actor_email: Mapped[str] = mapped_column(String(255))
+    action: Mapped[str] = mapped_column(String(64))
+    note: Mapped[str] = mapped_column(Text, default="")
+    details: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class TransactionLabel(Base):
+    __tablename__ = "transaction_labels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    transaction_id: Mapped[int] = mapped_column(ForeignKey("transactions.id"), unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(64), index=True)
+    source: Mapped[str] = mapped_column(String(64), default="simulation")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

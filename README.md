@@ -24,4 +24,12 @@ make check
 Seed users (password: `password123`):
 - `admin@meridian.ai` (Admin)
 - `analyst@meridian.ai` (Analyst)
+- `reviewer@meridian.ai` (Reviewer)
 - `viewer@meridian.ai` (Viewer)
+
+## Phase 1 fraud platform upgrades
+- Hybrid rules + ML scoring with adaptive signal weighting and approve/review/decline thresholds
+- Reason codes, decision traces, and richer SHAP explanation summaries
+- Manual review queue with override decisions and review event history
+- KPI summary metrics extended with fraud/review/false-positive rates and blocked fraud value
+- Seeded fraud scenario generator: `POST /api/simulations/seed-scenarios`

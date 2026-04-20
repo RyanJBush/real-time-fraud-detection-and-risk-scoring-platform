@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 FEATURES = ["amount", "is_high_amount", "is_risky_country", "merchant_risk"]
 RISKY_COUNTRIES = {"NK", "IR"}
 RISKY_MERCHANTS = {"luxury-goods", "crypto-exchange", "gift-cards"}
+MODEL_VERSION = "logreg_v2_hybrid"
 
 _X = np.array(
     [
@@ -60,3 +61,16 @@ def shap_explanation(features: np.ndarray) -> tuple[dict[str, float], list[str]]
 
 def serialize_explanation(shap_values: dict[str, float], top_factors: list[str]) -> tuple[str, str]:
     return json.dumps(shap_values), json.dumps(top_factors)
+
+
+def build_explanation_summary(shap_values: dict[str, float], top_factors: list[str], decision: str) -> str:
+    if not top_factors:
+        return f"Decision {decision} was made with limited model feature attribution."
+
+    primary = top_factors[0]
+    contribution = shap_values.get(primary, 0.0)
+    direction = "increased" if contribution >= 0 else "decreased"
+    return (
+        f"Decision {decision} was primarily influenced by {primary}, which "
+        f"{direction} risk by {abs(contribution):.3f}."
+    )
