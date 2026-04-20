@@ -11,6 +11,7 @@ from app.models import Transaction
 
 APPROVE_THRESHOLD_MAX = 0.4
 REVIEW_THRESHOLD_MAX = 0.75
+SIGNAL_TRIGGER_THRESHOLD = 1.0
 
 
 @dataclass
@@ -30,6 +31,9 @@ class ThresholdConfig:
 
 
 def evaluate_hybrid_decision(tx: Transaction, model_score: float, db: Session) -> FraudDecision:
+    country = (tx.country or "").upper()
+    merchant = (tx.merchant or "").lower()
+
     one_hour_ago = tx.timestamp - timedelta(hours=1)
     one_day_ago = tx.timestamp - timedelta(hours=24)
     ten_minutes_ago = tx.timestamp - timedelta(minutes=10)
@@ -63,16 +67,16 @@ def evaluate_hybrid_decision(tx: Transaction, model_score: float, db: Session) -
     )
 
     velocity_signal = 1.0 if velocity_count >= 3 else min(velocity_count / 3.0, 1.0)
-    geo_signal = 1.0 if tx.country.upper() in RISKY_COUNTRIES else 0.0
-    merchant_signal = 1.0 if tx.merchant.lower() in RISKY_MERCHANTS else 0.0
-    device_anomaly_signal = 1.0 if recent_country_count >= 3 else 0.0
+    geo_signal = 1.0 if country in RISKY_COUNTRIES else 0.0
+    merchant_signal = 1.0 if merchant in RISKY_MERCHANTS else 0.0
+    device_anomaly_proxy_signal = 1.0 if recent_country_count >= 3 else 0.0
     duplicate_signal = 1.0 if duplicate_count >= 1 else 0.0
 
     signals = {
         "velocity_signal": round(velocity_signal, 4),
         "geo_signal": round(geo_signal, 4),
         "merchant_signal": round(merchant_signal, 4),
-        "device_anomaly_signal": round(device_anomaly_signal, 4),
+        "device_anomaly_proxy_signal": round(device_anomaly_proxy_signal, 4),
         "duplicate_signal": round(duplicate_signal, 4),
     }
 
@@ -83,7 +87,7 @@ def evaluate_hybrid_decision(tx: Transaction, model_score: float, db: Session) -
         reason_codes.append("GEO_RISK_COUNTRY")
     if merchant_signal > 0:
         reason_codes.append("MERCHANT_RISK")
-    if device_anomaly_signal > 0:
+    if device_anomaly_proxy_signal > 0:
         reason_codes.append("DEVICE_ANOMALY_PROXY")
     if duplicate_signal > 0:
         reason_codes.append("DUPLICATE_PATTERN")
@@ -92,10 +96,10 @@ def evaluate_hybrid_decision(tx: Transaction, model_score: float, db: Session) -
         velocity_signal * 0.28
         + geo_signal * 0.24
         + merchant_signal * 0.2
-        + device_anomaly_signal * 0.14
+        + device_anomaly_proxy_signal * 0.14
         + duplicate_signal * 0.14
     )
-    triggered_signals = sum(1 for value in signals.values() if value >= 1.0)
+    triggered_signals = sum(1 for value in signals.values() if value >= SIGNAL_TRIGGER_THRESHOLD)
     rule_weight = min(0.65, 0.25 + 0.1 * triggered_signals)
 
     combined_score = (model_score * (1.0 - rule_weight)) + (rule_score * rule_weight)
@@ -119,7 +123,7 @@ def evaluate_hybrid_decision(tx: Transaction, model_score: float, db: Session) -
         decision = "decline"
         reason_codes.append("THRESHOLD_DECLINE")
 
-    group_key = f"{tx.card_last4}:{tx.merchant.lower()}:{tx.country.upper()}"
+    group_key = f"{tx.card_last4}:{merchant}:{country}"
 
     return FraudDecision(
         model_score=model_score,

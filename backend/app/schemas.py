@@ -101,7 +101,7 @@ class ReviewEventOut(BaseModel):
     actor_email: str
     action: str
     note: str
-    details: dict[str, str]
+    details: dict[str, str | float | bool]
     created_at: datetime
 
 

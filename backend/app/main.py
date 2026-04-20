@@ -295,10 +295,12 @@ def metrics_summary(
     fraud_rate = (known_fraud / len(known_label_scores)) if known_label_scores else 0.0
 
     declined_with_label = [s for s in scores if s.decision == "decline" and s.transaction_id in label_map]
-    false_positive_count = sum(
+    declined_non_fraud_count = sum(
         1 for s in declined_with_label if label_map[s.transaction_id] not in fraud_labels
     )
-    false_positive_rate = (false_positive_count / len(declined_with_label)) if declined_with_label else 0.0
+    false_positive_rate = (
+        declined_non_fraud_count / len(declined_with_label)
+    ) if declined_with_label else 0.0
 
     blocked_fraud_value = round(
         sum(
@@ -423,7 +425,7 @@ def get_review_history(transaction_id: int, db: Session = Depends(get_db)) -> li
             actor_email=event.actor_email,
             action=event.action,
             note=event.note,
-            details={str(key): str(value) for key, value in json.loads(event.details).items()},
+            details=json.loads(event.details),
             created_at=event.created_at,
         )
         for event in events

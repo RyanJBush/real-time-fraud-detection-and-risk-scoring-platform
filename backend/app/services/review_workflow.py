@@ -44,7 +44,12 @@ def upsert_review_case(
 
     review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction.id).first()
     if review_case:
-        review_case.status = "pending"
+        should_reopen_case = review_case.status != "resolved" or review_case.final_decision != decision
+        # Re-open pending when a case is still active or when a resolved case is re-scored to
+        # a different engine decision so analysts can reassess the change.
+        if should_reopen_case:
+            review_case.status = "pending"
+            review_case.resolved_at = None
         review_case.initial_decision = decision
         review_case.final_decision = decision
         review_case.model_version = model_version
