@@ -117,3 +117,29 @@ def apply_override(
         details={"previous_decision": previous_decision, "final_decision": final_decision},
     )
     return review_case
+
+
+def assign_review_case(
+    db: Session,
+    *,
+    transaction_id: int,
+    actor_email: str,
+    assigned_to: str,
+    note: str,
+) -> ReviewCase:
+    review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction_id).first()
+    if not review_case:
+        msg = "Review case not found"
+        raise ValueError(msg)
+
+    review_case.assigned_to = assigned_to
+    review_case.updated_at = datetime.utcnow()
+    record_review_event(
+        db,
+        review_case_id=review_case.id,
+        actor_email=actor_email,
+        action="assigned",
+        note=note,
+        details={"assigned_to": assigned_to},
+    )
+    return review_case
