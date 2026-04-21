@@ -74,3 +74,19 @@ def build_explanation_summary(shap_values: dict[str, float], top_factors: list[s
         f"Decision {decision} was primarily influenced by {primary}, which "
         f"{direction} risk by {abs(contribution):.3f}."
     )
+
+
+def build_explanation_narrative(
+    shap_values: dict[str, float],
+    top_factors: list[str],
+    reason_codes: list[str],
+    signal_details: dict[str, float],
+    decision: str,
+) -> str:
+    summary = build_explanation_summary(shap_values, top_factors, decision)
+    reason_text = ", ".join(reason_codes[:4]) if reason_codes else "NO_EXPLICIT_RULE_SIGNAL"
+    dominant_signal = max(signal_details, key=signal_details.get) if signal_details else "none"
+    return (
+        f"{summary} Rule/engine reason codes: {reason_text}. "
+        f"Dominant behavioral signal: {dominant_signal}."
+    )
