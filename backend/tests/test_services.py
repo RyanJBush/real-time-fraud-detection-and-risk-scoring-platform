@@ -36,7 +36,7 @@ def _create_transaction(
         merchant=merchant,
         country=country,
         card_last4=card_last4,
-        timestamp=timestamp or datetime.utcnow(),
+        timestamp=timestamp or datetime.now(),
         status=status,
     )
     db_session.add(tx)
@@ -45,7 +45,7 @@ def _create_transaction(
 
 
 def test_evaluate_hybrid_decision_triggers_escalations(db_session: Session) -> None:
-    now = datetime.utcnow()
+    now = datetime.now()
     _create_transaction(
         db_session,
         amount=6000,
@@ -122,7 +122,7 @@ def test_upsert_review_case_returns_none_for_approve(db_session: Session) -> Non
 
 def test_upsert_review_case_does_not_reopen_same_resolved_decision(db_session: Session) -> None:
     tx = _create_transaction(db_session)
-    resolved_at = datetime.utcnow() - timedelta(hours=2)
+    resolved_at = datetime.now() - timedelta(hours=2)
     case = ReviewCase(
         transaction_id=tx.id,
         status="resolved",
@@ -169,7 +169,7 @@ def test_upsert_review_case_reopens_when_decision_changes(db_session: Session) -
         model_version="v1",
         explanation_summary="old summary",
         reason_codes=json.dumps(["THRESHOLD_REVIEW"]),
-        resolved_at=datetime.utcnow(),
+        resolved_at=datetime.now(),
     )
     db_session.add(case)
     db_session.flush()
