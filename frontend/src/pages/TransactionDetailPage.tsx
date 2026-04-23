@@ -6,7 +6,11 @@ import { RiskGauge } from "../components/RiskGauge";
 import { fetchExplanation, fetchScore, fetchTransactions } from "../services/api";
 import type { Explanation, Score, Transaction } from "../types";
 
-export function TransactionDetailPage() {
+interface TransactionDetailPageProps {
+  token: string;
+}
+
+export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
   const { transactionId } = useParams();
   const txId = Number(transactionId);
 
@@ -19,9 +23,9 @@ export function TransactionDetailPage() {
     async function load() {
       try {
         const [transactions, txScore, txExplanation] = await Promise.all([
-          fetchTransactions(500),
-          fetchScore(txId),
-          fetchExplanation(txId),
+          fetchTransactions(token, 1, 500),
+          fetchScore(token, txId),
+          fetchExplanation(token, txId),
         ]);
         setTransaction(transactions.find((tx) => tx.id === txId) ?? null);
         setScore(txScore);
@@ -31,10 +35,10 @@ export function TransactionDetailPage() {
       }
     }
 
-    if (Number.isFinite(txId)) {
+    if (Number.isFinite(txId) && token) {
       load();
     }
-  }, [txId]);
+  }, [txId, token]);
 
   if (error) return <p className="state error">{error}</p>;
   if (!transaction || !score || !explanation) return <p className="state">Loading transaction detail...</p>;
@@ -45,27 +49,27 @@ export function TransactionDetailPage() {
         <h2>Transaction #{transaction.id}</h2>
         <ul className="meta-list">
           <li>
-            <span>Account</span>
-            <strong>{transaction.account_id}</strong>
+            <span>Merchant</span>
+            <strong>{transaction.merchant}</strong>
           </li>
           <li>
-            <span>Merchant</span>
-            <strong>{transaction.merchant_id}</strong>
+            <span>Country</span>
+            <strong>{transaction.country}</strong>
           </li>
           <li>
             <span>Amount</span>
             <strong>${transaction.amount.toFixed(2)}</strong>
           </li>
           <li>
-            <span>Channel</span>
-            <strong>{transaction.channel}</strong>
+            <span>Card</span>
+            <strong>****{transaction.card_last4}</strong>
           </li>
         </ul>
       </article>
 
       <article className="panel">
         <h2>Risk Score</h2>
-        <RiskGauge score={score.risk_score} />
+        <RiskGauge score={score.final_score} />
         <p className={`text-${score.decision}`}>
           Decision: <strong>{score.decision.toUpperCase()}</strong>
         </p>
@@ -74,7 +78,7 @@ export function TransactionDetailPage() {
       <article className="panel full-width">
         <h2>SHAP Feature Contributions</h2>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={explanation.top_features}>
+          <BarChart data={explanation.ranked_contributions}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="feature" />
             <YAxis />
@@ -82,7 +86,7 @@ export function TransactionDetailPage() {
             <Bar dataKey="contribution" fill="#f97316" />
           </BarChart>
         </ResponsiveContainer>
-        <p className="state">{explanation.note}</p>
+        <p className="state">{explanation.summary}</p>
       </article>
     </div>
   );
