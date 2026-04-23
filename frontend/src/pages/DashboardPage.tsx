@@ -33,6 +33,7 @@ export function DashboardPage({ token }: DashboardPageProps) {
     .sort((a, b) => a.transaction.id - b.transaction.id)
     .slice(-12)
     .map((row) => ({ id: row.transaction.id, risk: Number(((row.score?.final_score ?? 0) * 100).toFixed(2)) }));
+    .map((row) => ({ id: row.transaction.id, risk: Number((row.score.final_score * 100).toFixed(2)) }));
 
   if (loading) return <p className="state">Loading dashboard data...</p>;
   if (error) return <p className="state error">{error}</p>;

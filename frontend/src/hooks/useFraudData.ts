@@ -38,6 +38,7 @@ export function useFraudData(token: string | null) {
           transactions.map(async (transaction) => ({
             transaction,
             score: await fetchScoreIfExists(token, transaction.id),
+            score: await fetchScore(token, transaction.id),
           }))
         );
         setData(scored);
@@ -50,6 +51,7 @@ export function useFraudData(token: string | null) {
 
     load();
   }, [reloadToken, token]);
+  }, [token]);
 
   const kpis = useMemo(() => {
     const scoredItems = data.filter((item) => item.score);
@@ -58,6 +60,10 @@ export function useFraudData(token: string | null) {
     const declined = scoredItems.filter((d) => d.score?.decision === "decline").length;
     const avgRisk = scoredItems.length
       ? scoredItems.reduce((sum, item) => sum + (item.score?.final_score ?? 0), 0) / scoredItems.length
+    const reviewed = data.filter((d) => d.score.decision === "review").length;
+    const declined = data.filter((d) => d.score.decision === "decline").length;
+    const avgRisk = data.length
+      ? data.reduce((sum, item) => sum + item.score.final_score, 0) / data.length
       : 0;
 
     return {
