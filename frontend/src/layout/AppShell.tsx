@@ -6,6 +6,7 @@ const navItems = [
   { to: "/", label: "Dashboard" },
   { to: "/transactions", label: "Transactions" },
   { to: "/alerts", label: "Fraud Alerts" },
+  { to: "/reviews", label: "Review Queue" },
 ];
 
 interface AppShellProps {
