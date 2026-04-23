@@ -4,21 +4,16 @@ import { Link } from "react-router-dom";
 import { RiskBadge } from "../components/RiskBadge";
 import { useFraudData } from "../hooks/useFraudData";
 
-interface TransactionsPageProps {
-  token: string;
-}
-
-export function TransactionsPage({ token }: TransactionsPageProps) {
-  const { data, loading, error } = useFraudData(token);
+export function TransactionsPage() {
+  const { data, loading, error } = useFraudData();
   const [query, setQuery] = useState("");
   const [decision, setDecision] = useState("all");
 
   const filtered = useMemo(() => {
     return data.filter(({ transaction, score }) => {
       const matchesQuery =
-        transaction.merchant.toLowerCase().includes(query.toLowerCase()) ||
-        transaction.country.toLowerCase().includes(query.toLowerCase()) ||
-        transaction.card_last4.includes(query) ||
+        transaction.account_id.toLowerCase().includes(query.toLowerCase()) ||
+        transaction.merchant_id.toLowerCase().includes(query.toLowerCase()) ||
         String(transaction.id).includes(query);
 
       const matchesDecision = decision === "all" || score.decision === decision;
@@ -34,7 +29,7 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
     <div className="panel">
       <div className="toolbar">
         <input
-          placeholder="Search by transaction/merchant/country/card"
+          placeholder="Search by transaction/account/merchant"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -50,9 +45,9 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
         <thead>
           <tr>
             <th>TX ID</th>
+            <th>Account</th>
             <th>Merchant</th>
-            <th>Country</th>
-            <th>Card</th>
+            <th>Channel</th>
             <th>Amount</th>
             <th>Risk</th>
             <th>Decision</th>
@@ -64,12 +59,12 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
               <td>
                 <Link to={`/transactions/${transaction.id}`}>#{transaction.id}</Link>
               </td>
-              <td>{transaction.merchant}</td>
-              <td>{transaction.country}</td>
-              <td>****{transaction.card_last4}</td>
+              <td>{transaction.account_id}</td>
+              <td>{transaction.merchant_id}</td>
+              <td>{transaction.channel}</td>
               <td>${transaction.amount.toFixed(2)}</td>
               <td>
-                <RiskBadge risk={score.final_score} />
+                <RiskBadge risk={score.risk_score} />
               </td>
               <td className={`text-${score.decision}`}>{score.decision}</td>
             </tr>
