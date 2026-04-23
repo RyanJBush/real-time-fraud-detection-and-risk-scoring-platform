@@ -140,3 +140,54 @@ export interface ReviewSuggestion {
   confidence: number;
   rationale: string;
 }
+
+export interface SeedScenarioResponse {
+  scenario: string;
+  count: number;
+  seed: number;
+  transaction_ids: number[];
+}
+
+export interface ModelEvaluationItem {
+  model_key: string;
+  model_version: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  auc: number;
+  false_positive_rate: number;
+  brier_score: number;
+  optimal_threshold: number;
+  cost_score: number;
+  samples: number;
+  class_balance: number;
+  notes: string;
+}
+
+export interface ModelEvaluationResponse {
+  total_models: number;
+  best_model: string | null;
+  items: ModelEvaluationItem[];
+}
+
+export interface CaseGroup {
+  group_key: string;
+  transaction_ids: number[];
+  case_ids: number[];
+  total_transactions: number;
+  max_risk_score: number;
+  review_required: boolean;
+  countries: string[];
+  merchants: string[];
+  open_cases: number;
+}
+
+export interface CaseGroupsResponse {
+  total_groups: number;
+  items: CaseGroup[];
+}
+
+export interface CaseSummary {
+  group_key: string;
+  summary: string;
+}
