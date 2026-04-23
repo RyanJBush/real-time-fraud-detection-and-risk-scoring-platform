@@ -47,6 +47,20 @@ a {
   gap: 0.5rem;
 }
 
+.logout-btn {
+  margin-top: auto;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
 .nav-link {
   color: #cbd5e1;
   padding: 0.65rem 0.8rem;
