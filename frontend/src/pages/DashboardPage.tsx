@@ -13,21 +13,26 @@ import {
 import { KpiCard } from "../components/KpiCard";
 import { useFraudData } from "../hooks/useFraudData";
 
-export function DashboardPage() {
-  const { data, loading, error, kpis } = useFraudData();
+interface DashboardPageProps {
+  token: string;
+}
 
-  const volumeByChannel = Object.entries(
+export function DashboardPage({ token }: DashboardPageProps) {
+  const { data, loading, error, kpis } = useFraudData(token);
+
+  const volumeByCountry = Object.entries(
     data.reduce<Record<string, number>>((acc, item) => {
-      acc[item.transaction.channel] = (acc[item.transaction.channel] ?? 0) + item.transaction.amount;
+      acc[item.transaction.country] = (acc[item.transaction.country] ?? 0) + item.transaction.amount;
       return acc;
     }, {})
   ).map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }));
 
   const riskTrend = data
+    .filter((row) => row.score)
     .slice()
     .sort((a, b) => a.transaction.id - b.transaction.id)
     .slice(-12)
-    .map((row) => ({ id: row.transaction.id, risk: Number((row.score.risk_score * 100).toFixed(2)) }));
+    .map((row) => ({ id: row.transaction.id, risk: Number(((row.score?.final_score ?? 0) * 100).toFixed(2)) }));
 
   if (loading) return <p className="state">Loading dashboard data...</p>;
   if (error) return <p className="state error">{error}</p>;
@@ -36,7 +41,11 @@ export function DashboardPage() {
     <div className="page-grid">
       <section className="kpi-grid">
         <KpiCard label="Transactions" value={kpis.transactionCount.toLocaleString()} />
-        <KpiCard label="Total Volume" value={`$${kpis.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+        <KpiCard label="Scored" value={kpis.scoredCount.toLocaleString()} />
+        <KpiCard
+          label="Total Volume"
+          value={`$${kpis.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+        />
         <KpiCard label="Avg Risk" value={`${(kpis.avgRisk * 100).toFixed(1)}%`} />
         <KpiCard label="Reviewed / Declined" value={`${kpis.reviewed} / ${kpis.declined}`} />
       </section>
@@ -61,10 +70,17 @@ export function DashboardPage() {
       </article>
 
       <article className="panel">
-        <h2>Volume by Channel</h2>
+        <h2>Volume by Country</h2>
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
-            <Pie data={volumeByChannel} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} fill="#0ea5e9" />
+            <Pie
+              data={volumeByCountry}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={60}
+              outerRadius={90}
+              fill="#0ea5e9"
+            />
             <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
           </PieChart>
         </ResponsiveContainer>

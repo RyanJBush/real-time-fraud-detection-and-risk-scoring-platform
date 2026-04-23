@@ -47,6 +47,20 @@ a {
   gap: 0.5rem;
 }
 
+.logout-btn {
+  margin-top: auto;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
 .nav-link {
   color: #cbd5e1;
   padding: 0.65rem 0.8rem;
@@ -375,4 +389,42 @@ select {
   .detail-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+.transactions-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.create-form {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.create-form button,
+.inline-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 0.5rem 0.65rem;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+}
+
+.create-form button:disabled,
+.inline-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.inline-btn {
+  background: #334155;
+  font-size: 0.8rem;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 0.85rem;
 }
