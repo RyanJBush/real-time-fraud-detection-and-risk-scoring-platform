@@ -38,11 +38,6 @@ export function AlertsPage({ token }: AlertsPageProps) {
               score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
             ) : (
               <span>pending_score</span>
-          <div className="flags">
-            {score?.reason_codes.length ? (
-              score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
-            ) : (
-              <span>pending_score</span>
           <RiskGauge score={score.final_score} />
           <div className="flags">
             {score.reason_codes.length ? (
