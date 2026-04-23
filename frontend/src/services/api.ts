@@ -4,7 +4,6 @@ import type {
   RiskDecision,
   Score,
   Transaction,
-  TransactionCreate,
   TransactionListResponse,
   User,
 } from "../types";
@@ -47,34 +46,6 @@ export async function fetchMe(token: string): Promise<User> {
   return handleResponse<User>(response);
 }
 
-export async function createTransaction(token: string, payload: TransactionCreate): Promise<Transaction> {
-  const response = await fetch(`${API_BASE}/transactions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(token) },
-    body: JSON.stringify(payload),
-  });
-  return handleResponse<Transaction>(response);
-}
-
-export async function fetchTransactions(token: string, page = 1, pageSize = 100): Promise<Transaction[]> {
-  const response = await fetch(`${API_BASE}/transactions?page=${page}&page_size=${pageSize}`, {
-    headers: { ...authHeaders(token) },
-  });
-  const payload = await handleResponse<TransactionListResponse>(response);
-  return payload.items;
-}
-
-export async function fetchTransaction(token: string, transactionId: number): Promise<Transaction> {
-  const response = await fetch(`${API_BASE}/transactions/${transactionId}`, {
-    headers: { ...authHeaders(token) },
-  });
-  return handleResponse<Transaction>(response);
-}
-
-export async function scoreTransaction(token: string, transactionId: number): Promise<Score> {
-  const response = await fetch(`${API_BASE}/scores`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(token) },
 export async function fetchTransactions(token: string, page = 1, pageSize = 100): Promise<Transaction[]> {
   const response = await fetch(`${API_BASE}/transactions?page=${page}&page_size=${pageSize}`, {
     headers: { ...authHeaders(token) },
@@ -96,19 +67,11 @@ export async function fetchScore(token: string, transactionId: number): Promise<
   const response = await fetch(`${API_BASE}/scores/${transactionId}`, {
     headers: { ...authHeaders(token) },
   });
-  return handleResponse<Score>(response);
-}
 
   if (response.status === 404) {
     return scoreTransaction(token, transactionId);
   }
 
-export async function fetchScoreIfExists(token: string, transactionId: number): Promise<Score | null> {
-  const response = await fetch(`${API_BASE}/scores/${transactionId}`, {
-    headers: { ...authHeaders(token) },
-  });
-
-  if (response.status === 404) return null;
   return handleResponse<Score>(response);
 }
 

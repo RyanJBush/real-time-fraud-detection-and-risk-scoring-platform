@@ -1,26 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { fetchScoreIfExists, fetchTransactions, scoreTransaction } from "../services/api";
+import { fetchScore, fetchTransactions } from "../services/api";
 import type { EnrichedTransaction } from "../types";
 
 export function useFraudData(token: string | null) {
   const [data, setData] = useState<EnrichedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
-
-  const refresh = useCallback(() => {
-    setReloadToken((current) => current + 1);
-  }, []);
-
-  const runScore = useCallback(
-    async (transactionId: number) => {
-      if (!token) return;
-      await scoreTransaction(token, transactionId);
-      refresh();
-    },
-    [refresh, token]
-  );
 
   useEffect(() => {
     async function load() {
@@ -37,7 +23,6 @@ export function useFraudData(token: string | null) {
         const scored = await Promise.all(
           transactions.map(async (transaction) => ({
             transaction,
-            score: await fetchScoreIfExists(token, transaction.id),
             score: await fetchScore(token, transaction.id),
           }))
         );
@@ -50,16 +35,10 @@ export function useFraudData(token: string | null) {
     }
 
     load();
-  }, [reloadToken, token]);
   }, [token]);
 
   const kpis = useMemo(() => {
-    const scoredItems = data.filter((item) => item.score);
     const totalVolume = data.reduce((sum, item) => sum + item.transaction.amount, 0);
-    const reviewed = scoredItems.filter((d) => d.score?.decision === "review").length;
-    const declined = scoredItems.filter((d) => d.score?.decision === "decline").length;
-    const avgRisk = scoredItems.length
-      ? scoredItems.reduce((sum, item) => sum + (item.score?.final_score ?? 0), 0) / scoredItems.length
     const reviewed = data.filter((d) => d.score.decision === "review").length;
     const declined = data.filter((d) => d.score.decision === "decline").length;
     const avgRisk = data.length
@@ -72,9 +51,8 @@ export function useFraudData(token: string | null) {
       reviewed,
       declined,
       avgRisk,
-      scoredCount: scoredItems.length,
     };
   }, [data]);
 
-  return { data, loading, error, kpis, refresh, runScore };
+  return { data, loading, error, kpis };
 }

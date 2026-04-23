@@ -28,11 +28,9 @@ export function DashboardPage({ token }: DashboardPageProps) {
   ).map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }));
 
   const riskTrend = data
-    .filter((row) => row.score)
     .slice()
     .sort((a, b) => a.transaction.id - b.transaction.id)
     .slice(-12)
-    .map((row) => ({ id: row.transaction.id, risk: Number(((row.score?.final_score ?? 0) * 100).toFixed(2)) }));
     .map((row) => ({ id: row.transaction.id, risk: Number((row.score.final_score * 100).toFixed(2)) }));
 
   if (loading) return <p className="state">Loading dashboard data...</p>;
@@ -42,7 +40,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
     <div className="page-grid">
       <section className="kpi-grid">
         <KpiCard label="Transactions" value={kpis.transactionCount.toLocaleString()} />
-        <KpiCard label="Scored" value={kpis.scoredCount.toLocaleString()} />
         <KpiCard
           label="Total Volume"
           value={`$${kpis.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}

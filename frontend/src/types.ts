@@ -11,13 +11,6 @@ export interface User {
   role: string;
 }
 
-export interface TransactionCreate {
-  amount: number;
-  merchant: string;
-  country: string;
-  card_last4: string;
-}
-
 export interface Transaction {
   id: number;
   amount: number;
@@ -69,5 +62,5 @@ export interface Explanation {
 
 export interface EnrichedTransaction {
   transaction: Transaction;
-  score: Score | null;
+  score: Score;
 }

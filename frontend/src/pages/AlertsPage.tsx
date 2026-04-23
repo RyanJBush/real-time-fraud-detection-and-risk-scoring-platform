@@ -11,8 +11,6 @@ export function AlertsPage({ token }: AlertsPageProps) {
   const { data, loading, error } = useFraudData(token);
 
   const alerts = data
-    .filter((row) => row.score && row.score.decision !== "approve")
-    .sort((a, b) => (b.score?.final_score ?? 0) - (a.score?.final_score ?? 0));
     .filter((row) => row.score.decision !== "approve")
     .sort((a, b) => b.score.final_score - a.score.final_score);
 
@@ -30,14 +28,8 @@ export function AlertsPage({ token }: AlertsPageProps) {
                 {transaction.merchant} · {transaction.country} · ${transaction.amount.toFixed(2)}
               </p>
             </div>
-            <strong className={`text-${score?.decision}`}>{score?.decision.toUpperCase()}</strong>
+            <strong className={`text-${score.decision}`}>{score.decision.toUpperCase()}</strong>
           </div>
-          <RiskGauge score={score?.final_score ?? 0} />
-          <div className="flags">
-            {score?.reason_codes.length ? (
-              score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
-            ) : (
-              <span>pending_score</span>
           <RiskGauge score={score.final_score} />
           <div className="flags">
             {score.reason_codes.length ? (
