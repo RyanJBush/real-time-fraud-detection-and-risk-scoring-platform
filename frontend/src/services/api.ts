@@ -46,6 +46,13 @@ export async function fetchMe(token: string): Promise<User> {
   return handleResponse<User>(response);
 }
 
+
+export async function fetchTransaction(token: string, transactionId: number): Promise<Transaction> {
+  const response = await fetch(`${API_BASE}/transactions/${transactionId}`, {
+    headers: { ...authHeaders(token) },
+  });
+  return handleResponse<Transaction>(response);
+}
 export async function fetchTransactions(token: string, page = 1, pageSize = 100): Promise<Transaction[]> {
   const response = await fetch(`${API_BASE}/transactions?page=${page}&page_size=${pageSize}`, {
     headers: { ...authHeaders(token) },
