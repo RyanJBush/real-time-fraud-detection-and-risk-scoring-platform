@@ -54,6 +54,13 @@ export async function fetchTransactions(token: string, page = 1, pageSize = 100)
   return payload.items;
 }
 
+export async function fetchTransaction(token: string, transactionId: number): Promise<Transaction> {
+  const response = await fetch(`${API_BASE}/transactions/${transactionId}`, {
+    headers: { ...authHeaders(token) },
+  });
+  return handleResponse<Transaction>(response);
+}
+
 export async function scoreTransaction(token: string, transactionId: number): Promise<Score> {
   const response = await fetch(`${API_BASE}/scores`, {
     method: "POST",
