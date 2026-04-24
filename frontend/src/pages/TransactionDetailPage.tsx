@@ -36,14 +36,6 @@ export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
           setScore(null);
           setExplanation(null);
         }
-        const [transactions, txScore, txExplanation] = await Promise.all([
-          fetchTransactions(token, 1, 500),
-          fetchScore(token, txId),
-          fetchExplanation(token, txId),
-        ]);
-        setTransaction(transactions.find((tx) => tx.id === txId) ?? null);
-        setScore(txScore);
-        setExplanation(txExplanation);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load detail");
       }
@@ -103,7 +95,9 @@ export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
             <p className={`text-${score.decision}`}>
               Decision: <strong>{score.decision.toUpperCase()}</strong>
             </p>
-            <p className="muted">Thresholds — approve ≤ {score.threshold_approve_max}, review ≤ {score.threshold_review_max}</p>
+            <p className="muted">
+              Thresholds — approve ≤ {score.threshold_approve_max}, review ≤ {score.threshold_review_max}
+            </p>
           </>
         ) : (
           <p className="state">This transaction has not been scored yet.</p>

@@ -136,13 +136,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
           label="Blocked Fraud Value"
           value={`$${summary.blocked_fraud_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
         />
-        <KpiCard label="Transactions" value={kpis.transactionCount.toLocaleString()} />
-        <KpiCard
-          label="Total Volume"
-          value={`$${kpis.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-        />
-        <KpiCard label="Avg Risk" value={`${(kpis.avgRisk * 100).toFixed(1)}%`} />
-        <KpiCard label="Reviewed / Declined" value={`${kpis.reviewed} / ${kpis.declined}`} />
       </section>
 
       <article className="panel">
@@ -190,8 +183,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
               fill="#0ea5e9"
             />
             <Tooltip formatter={(value) => `${Number(value ?? 0).toLocaleString()} events`} />
-            <Tooltip formatter={(value: number) => `${value.toLocaleString()} events`} />
-            <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
           </PieChart>
         </ResponsiveContainer>
       </article>

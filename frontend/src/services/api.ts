@@ -5,9 +5,6 @@ import type {
   LoginResponse,
   MetricsSummary,
   ModelEvaluationResponse,
-  Explanation,
-  LoginResponse,
-  MetricsSummary,
   ReviewEvent,
   ReviewQueueResponse,
   ReviewSuggestion,
@@ -18,16 +15,6 @@ import type {
   TransactionCreate,
   TransactionListResponse,
   TrendSummary,
-  User,
-} from "../types";
-
-const API_BASE =
-  (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_API_BASE ??
-  "http://localhost:8000/api";
-  RiskDecision,
-  Score,
-  Transaction,
-  TransactionListResponse,
   User,
 } from "../types";
 
@@ -46,6 +33,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
     throw new Error(detail);
   }
+
   return (await response.json()) as T;
 }
 
@@ -60,15 +48,6 @@ export async function login(email: string, password: string): Promise<LoginRespo
     body: JSON.stringify({ email, password }),
   });
   return handleResponse<LoginResponse>(response);
-}
-
-export async function fetchMe(token: string): Promise<User> {
-  const response = await fetch(`${API_BASE}/auth/me`, {
-    headers: { ...authHeaders(token) },
-  });
-  return handleResponse<User>(response);
-}
-
 }
 
 export async function fetchMe(token: string): Promise<User> {
@@ -100,27 +79,6 @@ export async function fetchTransaction(token: string, transactionId: number): Pr
     headers: { ...authHeaders(token) },
   });
   return handleResponse<Transaction>(response);
-}
-
-export async function scoreTransaction(token: string, transactionId: number): Promise<Score> {
-  const response = await fetch(`${API_BASE}/scores`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(token) },
-}
-
-export async function fetchMe(token: string): Promise<User> {
-  const response = await fetch(`${API_BASE}/auth/me`, {
-    headers: { ...authHeaders(token) },
-  });
-  return handleResponse<User>(response);
-}
-
-export async function fetchTransactions(token: string, page = 1, pageSize = 100): Promise<Transaction[]> {
-  const response = await fetch(`${API_BASE}/transactions?page=${page}&page_size=${pageSize}`, {
-    headers: { ...authHeaders(token) },
-  });
-  const payload = await handleResponse<TransactionListResponse>(response);
-  return payload.items;
 }
 
 export async function scoreTransaction(token: string, transactionId: number): Promise<Score> {

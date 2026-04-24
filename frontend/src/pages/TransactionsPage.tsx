@@ -18,8 +18,6 @@ const initialForm = {
 
 export function TransactionsPage({ token }: TransactionsPageProps) {
   const { data, loading, error, runScore, refresh } = useFraudData(token);
-export function TransactionsPage({ token }: TransactionsPageProps) {
-  const { data, loading, error } = useFraudData(token);
   const [query, setQuery] = useState("");
   const [decision, setDecision] = useState("all");
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +43,7 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
     event.preventDefault();
     setSubmitting(true);
     setFormError(null);
+
     try {
       await createTransaction(token, {
         amount: Number(form.amount),
@@ -114,9 +113,9 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
           <input
             placeholder="Search by transaction/merchant/country/card"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
           />
-          <select value={decision} onChange={(e) => setDecision(e.target.value)}>
+          <select value={decision} onChange={(event) => setDecision(event.target.value)}>
             <option value="all">All decisions</option>
             <option value="unscored">Unscored</option>
             <option value="approve">Approve</option>
