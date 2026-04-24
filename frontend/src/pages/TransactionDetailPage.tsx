@@ -127,6 +127,69 @@ export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
           </div>
         </article>
       ) : null}
+      </article>
+
+      {explanation ? (
+        <article className="panel full-width">
+          <h2>SHAP Feature Contributions</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={explanation.ranked_contributions}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="feature" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="contribution" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="state">{explanation.summary}</p>
+          <div className="flags">
+            {(score?.reason_codes ?? []).map((code) => (
+              <span key={code}>{code}</span>
+            ))}
+          </div>
+        </article>
+      ) : null}
+      </article>
+
+      {explanation ? (
+        <article className="panel full-width">
+          <h2>SHAP Feature Contributions</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={explanation.ranked_contributions}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="feature" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="contribution" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="state">{explanation.summary}</p>
+          <div className="flags">
+            {(score?.reason_codes ?? []).map((code) => (
+              <span key={code}>{code}</span>
+            ))}
+          </div>
+        </article>
+      ) : null}
+        <RiskGauge score={score.final_score} />
+        <p className={`text-${score.decision}`}>
+          Decision: <strong>{score.decision.toUpperCase()}</strong>
+        </p>
+      </article>
+
+      <article className="panel full-width">
+        <h2>SHAP Feature Contributions</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={explanation.ranked_contributions}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="feature" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="contribution" fill="#f97316" />
+          </BarChart>
+        </ResponsiveContainer>
+        <p className="state">{explanation.summary}</p>
+      </article>
     </div>
   );
 }

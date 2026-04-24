@@ -102,6 +102,16 @@ export async function fetchScoreIfExists(token: string, transactionId: number): 
     headers: { ...authHeaders(token) },
   });
 
+
+  if (response.status === 404) {
+    return scoreTransaction(token, transactionId);
+  }
+
+export async function fetchScoreIfExists(token: string, transactionId: number): Promise<Score | null> {
+  const response = await fetch(`${API_BASE}/scores/${transactionId}`, {
+    headers: { ...authHeaders(token) },
+  });
+
   if (response.status === 404) return null;
   return handleResponse<Score>(response);
 }
