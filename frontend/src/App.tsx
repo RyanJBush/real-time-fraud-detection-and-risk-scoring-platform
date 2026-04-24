@@ -7,6 +7,8 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { TransactionDetailPage } from "./pages/TransactionDetailPage";
 import { TransactionsPage } from "./pages/TransactionsPage";
+import { ReviewsPage } from "./pages/ReviewsPage";
+import { IntelligencePage } from "./pages/IntelligencePage";
 import { useEffect, useState } from "react";
 import type { User } from "./types";
 
@@ -39,6 +41,7 @@ export default function App() {
   }, [token]);
 
   function handleLogin(nextToken: string) {
+    setAuthLoading(true);
     localStorage.setItem("meridian_token", nextToken);
     setToken(nextToken);
   }
@@ -64,6 +67,8 @@ export default function App() {
           <Route path="transactions" element={<TransactionsPage token={token} />} />
           <Route path="transactions/:transactionId" element={<TransactionDetailPage token={token} />} />
           <Route path="alerts" element={<AlertsPage token={token} />} />
+          <Route path="reviews" element={<ReviewsPage token={token} />} />
+          <Route path="intelligence" element={<IntelligencePage token={token} />} />
         </Route>
       ) : null}
 
