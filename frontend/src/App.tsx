@@ -39,6 +39,7 @@ export default function App() {
   }, [token]);
 
   function handleLogin(nextToken: string) {
+    setAuthLoading(true);
     localStorage.setItem("meridian_token", nextToken);
     setToken(nextToken);
   }
