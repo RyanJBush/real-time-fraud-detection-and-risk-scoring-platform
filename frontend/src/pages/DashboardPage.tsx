@@ -64,41 +64,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
     [trends]
   );
 
-    load();
-  }, [token]);
-
-  const fraudTrend = useMemo(
-    () =>
-      (trends?.fraud_trend ?? []).map((point) => ({
-        date: point.date,
-        fraudRate: Number((point.fraud_rate * 100).toFixed(2)),
-      })),
-    [trends]
-  );
-
-  const riskyCountries = useMemo(
-    () =>
-      (trends?.top_risky_countries ?? []).map((row) => ({
-        name: row.name,
-        value: row.risk_events,
-      })),
-    [trends]
-  );
-  const { data, loading, error, kpis } = useFraudData(token);
-
-  const volumeByCountry = Object.entries(
-    data.reduce<Record<string, number>>((acc, item) => {
-      acc[item.transaction.country] = (acc[item.transaction.country] ?? 0) + item.transaction.amount;
-      return acc;
-    }, {})
-  ).map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }));
-
-  const riskTrend = data
-    .slice()
-    .sort((a, b) => a.transaction.id - b.transaction.id)
-    .slice(-12)
-    .map((row) => ({ id: row.transaction.id, risk: Number((row.score.final_score * 100).toFixed(2)) }));
-
   if (loading) return <p className="state">Loading dashboard data...</p>;
   if (error) return <p className="state error">{error}</p>;
   if (!summary) return <p className="state">No dashboard metrics available.</p>;
@@ -115,13 +80,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
           label="Blocked Fraud Value"
           value={`$${summary.blocked_fraud_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
         />
-        <KpiCard label="Transactions" value={kpis.transactionCount.toLocaleString()} />
-        <KpiCard
-          label="Total Volume"
-          value={`$${kpis.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-        />
-        <KpiCard label="Avg Risk" value={`${(kpis.avgRisk * 100).toFixed(1)}%`} />
-        <KpiCard label="Reviewed / Declined" value={`${kpis.reviewed} / ${kpis.declined}`} />
       </section>
 
       <article className="panel">
@@ -149,15 +107,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
           <PieChart>
             <Pie
               data={riskyCountries}
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={riskyCountries}
-        <h2>Volume by Country</h2>
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={volumeByCountry}
               dataKey="value"
               nameKey="name"
               innerRadius={60}
@@ -165,8 +114,6 @@ export function DashboardPage({ token }: DashboardPageProps) {
               fill="#0ea5e9"
             />
             <Tooltip formatter={(value) => `${Number(value ?? 0).toLocaleString()} events`} />
-            <Tooltip formatter={(value: number) => `${value.toLocaleString()} events`} />
-            <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
           </PieChart>
         </ResponsiveContainer>
       </article>
