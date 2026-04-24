@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { RiskGauge } from "../components/RiskGauge";
-import { fetchExplanation, fetchScore, fetchTransactions } from "../services/api";
+import { fetchExplanation, fetchScore, fetchTransactionById } from "../services/api";
 import type { Explanation, Score, Transaction } from "../types";
 
 interface TransactionDetailPageProps {
@@ -22,12 +22,12 @@ export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
   useEffect(() => {
     async function load() {
       try {
-        const [transactions, txScore, txExplanation] = await Promise.all([
-          fetchTransactions(token, 1, 500),
+        const [txDetail, txScore, txExplanation] = await Promise.all([
+          fetchTransactionById(token, txId),
           fetchScore(token, txId),
           fetchExplanation(token, txId),
         ]);
-        setTransaction(transactions.find((tx) => tx.id === txId) ?? null);
+        setTransaction(txDetail);
         setScore(txScore);
         setExplanation(txExplanation);
       } catch (err) {
