@@ -6,9 +6,26 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.models import BackgroundJob, DecisionTrace, ReviewCase, ReviewEvent, RiskScore, Transaction
+from app.models import (
+    BackgroundJob,
+    DecisionTrace,
+    ReviewCase,
+    ReviewEvent,
+    RiskScore,
+    Transaction,
+    TransactionLabel,
+)
+from app.services.ai_assist import generate_group_summary, generate_review_suggestion
+from app.services.analytics import build_case_groups, build_trend_summary
+from app.services.audit import write_audit_log
+from app.services.feature_service import (
+    compute_transaction_features,
+    refresh_recent_feature_snapshots,
+    upsert_feature_snapshot,
+)
 from app.services.fraud_engine import evaluate_hybrid_decision
 from app.services.jobs import create_job, job_summary, set_job_status
+from app.services.pii import mask_card_last4, mask_email, sanitize_payload
 from app.services.review_workflow import apply_override, assign_review_case, upsert_review_case
 
 
@@ -309,3 +326,240 @@ def test_create_job_set_status_and_summary(db_session: Session) -> None:
 def test_set_job_status_raises_for_unknown_job(db_session: Session) -> None:
     with pytest.raises(ValueError, match="Job not found"):
         set_job_status(db_session, job_id=99999, status="failed", error_message="nope")
+
+
+def test_compute_and_upsert_feature_snapshots(db_session: Session) -> None:
+    now = datetime.now()
+    _create_transaction(
+        db_session,
+        amount=120.0,
+        merchant="coffee",
+        country="US",
+        card_last4="7777",
+        timestamp=now - timedelta(minutes=50),
+    )
+    _create_transaction(
+        db_session,
+        amount=80.0,
+        merchant="books",
+        country="US",
+        card_last4="7777",
+        timestamp=now - timedelta(hours=2),
+    )
+    current = _create_transaction(
+        db_session,
+        amount=4000.0,
+        merchant="luxury",
+        country="US",
+        card_last4="7777",
+        timestamp=now,
+    )
+
+    features = compute_transaction_features(db_session, current)
+    assert features["velocity_1h"] == 1.0
+    assert features["card_volume_24h"] == 3.0
+    assert features["amount_zscore_proxy"] == 2.0
+    assert features["is_high_amount"] == 1.0
+
+    snapshot = upsert_feature_snapshot(db_session, current)
+    db_session.flush()
+    assert snapshot.transaction_id == current.id
+    assert json.loads(snapshot.features_json)["velocity_1h"] == 1.0
+
+    current.amount = 100.0
+    updated = upsert_feature_snapshot(db_session, current)
+    db_session.flush()
+    assert updated.id == snapshot.id
+    assert json.loads(updated.features_json)["is_high_amount"] == 0.0
+
+
+def test_refresh_recent_feature_snapshots_honors_window(db_session: Session) -> None:
+    now = datetime.now()
+    recent = _create_transaction(db_session, card_last4="3000", timestamp=now - timedelta(hours=3))
+    _create_transaction(db_session, card_last4="3000", timestamp=now - timedelta(hours=30))
+
+    refreshed = refresh_recent_feature_snapshots(db_session, window_hours=24)
+    db_session.flush()
+
+    assert refreshed == 1
+    assert upsert_feature_snapshot(db_session, recent).transaction_id == recent.id
+
+
+def test_build_case_groups_and_trend_summary(db_session: Session) -> None:
+    day_one = datetime(2026, 1, 10, 8, 0, 0)
+    day_two = datetime(2026, 1, 11, 9, 0, 0)
+
+    tx1 = _create_transaction(
+        db_session,
+        amount=9000.0,
+        merchant="Crypto-Exchange",
+        country="us",
+        card_last4="1111",
+        timestamp=day_one,
+    )
+    tx2 = _create_transaction(
+        db_session,
+        amount=200.0,
+        merchant="Crypto-Exchange",
+        country="US",
+        card_last4="1111",
+        timestamp=day_two,
+    )
+    tx3 = _create_transaction(
+        db_session,
+        amount=50.0,
+        merchant="grocery",
+        country="ca",
+        card_last4="2222",
+        timestamp=day_two,
+    )
+
+    db_session.add_all(
+        [
+            DecisionTrace(
+                transaction_id=tx1.id,
+                combined_score=0.88,
+                decision="decline",
+                reason_codes=json.dumps(["RULE"]),
+                signal_details=json.dumps({"velocity_signal": 1.0}),
+                group_key="1111:crypto-exchange:US",
+                model_version="v1",
+            ),
+            DecisionTrace(
+                transaction_id=tx2.id,
+                combined_score=0.55,
+                decision="review",
+                reason_codes=json.dumps(["THRESHOLD_REVIEW"]),
+                signal_details=json.dumps({"velocity_signal": 0.6}),
+                group_key="1111:crypto-exchange:US",
+                model_version="v1",
+            ),
+            DecisionTrace(
+                transaction_id=tx3.id,
+                combined_score=0.2,
+                decision="approve",
+                reason_codes=json.dumps(["THRESHOLD_APPROVE"]),
+                signal_details=json.dumps({"velocity_signal": 0.0}),
+                group_key="2222:grocery:CA",
+                model_version="v1",
+            ),
+            RiskScore(transaction_id=tx1.id, model_score=0.8, final_score=0.88, decision="decline"),
+            RiskScore(transaction_id=tx2.id, model_score=0.5, final_score=0.55, decision="review"),
+            RiskScore(transaction_id=tx3.id, model_score=0.1, final_score=0.2, decision="approve"),
+            ReviewCase(
+                transaction_id=tx1.id,
+                status="pending",
+                initial_decision="decline",
+                final_decision="decline",
+                assigned_to="",
+                analyst_notes="",
+                model_version="v1",
+                explanation_summary="High risk",
+                reason_codes=json.dumps(["RULE"]),
+            ),
+        ]
+    )
+    db_session.add_all(
+        [
+            TransactionLabel(transaction_id=tx1.id, label="confirmed_fraud", source="simulation"),
+            TransactionLabel(transaction_id=tx3.id, label="cleared", source="manual"),
+        ]
+    )
+    db_session.flush()
+
+    all_groups = build_case_groups(db_session, status="all")
+    assert len(all_groups) == 2
+    assert all_groups[0]["group_key"] == "1111:crypto-exchange:US"
+    assert all_groups[0]["open_cases"] == 1
+    assert all_groups[0]["countries"] == ["US"]
+    assert all_groups[0]["merchants"] == ["crypto-exchange"]
+
+    pending_groups = build_case_groups(db_session, status="pending")
+    assert len(pending_groups) == 1
+    assert pending_groups[0]["group_key"] == "1111:crypto-exchange:US"
+
+    trends = build_trend_summary(db_session)
+    assert len(trends["fraud_trend"]) == 2
+    assert trends["fraud_trend"][0]["date"] == "2026-01-10"
+    assert trends["fraud_trend"][0]["fraud_rate"] == 1.0
+    assert trends["top_risky_merchants"][0]["merchant"] == "crypto-exchange"
+    assert trends["top_risky_countries"][0]["country"] == "US"
+
+
+def test_pii_audit_and_ai_assist_helpers(db_session: Session) -> None:
+    assert mask_email("ab@meridian.ai") == "**@meridian.ai"
+    assert mask_email("analyst@meridian.ai") == "a***t@meridian.ai"
+    assert mask_email("invalid-email") == "***"
+    assert mask_card_last4("987654") == "****7654"
+    assert mask_card_last4("") == "****"
+
+    sanitized = sanitize_payload(
+        {
+            "reviewer_email": "analyst@meridian.ai",
+            "card_last4": "1234",
+            "nested": [{"backup_email": "qa@meridian.ai"}],
+        }
+    )
+    assert sanitized["reviewer_email"] == "a***t@meridian.ai"
+    assert sanitized["card_last4"] == "****1234"
+    assert sanitized["nested"][0]["backup_email"] == "**@meridian.ai"
+
+    log = write_audit_log(
+        db_session,
+        actor_email="admin@meridian.ai",
+        action="rule_update",
+        entity_type="rule",
+        entity_id="42",
+        details={"owner_email": "owner@meridian.ai", "card_last4": "9988"},
+    )
+    db_session.flush()
+    assert log.actor_email == "a***n@meridian.ai"
+    assert json.loads(log.details)["owner_email"] == "o***r@meridian.ai"
+    assert json.loads(log.details)["card_last4"] == "****9988"
+
+    score = RiskScore(transaction_id=1, model_score=0.4, final_score=0.84, decision="decline")
+    trace = DecisionTrace(
+        transaction_id=1,
+        combined_score=0.84,
+        decision="decline",
+        reason_codes=json.dumps(["RULE_A", "RULE_B"]),
+        signal_details=json.dumps({"velocity_signal": 0.9, "geo_signal": 0.2}),
+        group_key="k",
+        model_version="v1",
+    )
+    suggestion = generate_review_suggestion(score, trace)
+    assert suggestion["suggested_decision"] == "decline"
+    assert suggestion["confidence"] == 0.9
+    assert "velocity_signal" in suggestion["rationale"]
+    assert "RULE_A" in suggestion["rationale"]
+
+    group_summary = generate_group_summary(
+        {
+            "group_key": "1111:merchant:US",
+            "total_transactions": 2,
+            "countries": ["US"],
+            "merchants": ["merchant"],
+            "max_risk_score": 0.88,
+            "open_cases": 1,
+        },
+        [
+            Transaction(
+                amount=100.0,
+                merchant="merchant",
+                country="US",
+                card_last4="1111",
+                timestamp=datetime.now(),
+                status="received",
+            ),
+            Transaction(
+                amount=50.0,
+                merchant="merchant",
+                country="US",
+                card_last4="1111",
+                timestamp=datetime.now(),
+                status="received",
+            ),
+        ],
+    )
+    assert "Cluster 1111:merchant:US has 2 related transactions" in group_summary
+    assert "Average amount is 75.00" in group_summary
