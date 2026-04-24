@@ -124,6 +124,7 @@ def _metrics_for_threshold(y_true: np.ndarray, y_prob: np.ndarray, threshold: fl
         zero_division=0,
     )
 
+    tp = float(np.sum((y_true == 1) & (y_pred == 1)))
     fp = float(np.sum((y_true == 0) & (y_pred == 1)))
     tn = float(np.sum((y_true == 0) & (y_pred == 0)))
     fn = float(np.sum((y_true == 1) & (y_pred == 0)))
