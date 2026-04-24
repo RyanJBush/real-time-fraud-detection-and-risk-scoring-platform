@@ -1,12 +1,21 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 
+import type { User } from "../types";
+
 const navItems = [
   { to: "/", label: "Dashboard" },
   { to: "/transactions", label: "Transactions" },
   { to: "/alerts", label: "Fraud Alerts" },
+  { to: "/reviews", label: "Review Queue" },
+  { to: "/intelligence", label: "Fraud Lab" },
 ];
 
-export function AppShell() {
+interface AppShellProps {
+  user: User;
+  onLogout: () => void;
+}
+
+export function AppShell({ user, onLogout }: AppShellProps) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -20,6 +29,9 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
+        <button className="logout-btn" onClick={onLogout}>
+          Logout
+        </button>
       </aside>
       <div className="content-area">
         <header className="topbar">
@@ -27,7 +39,9 @@ export function AppShell() {
             <h1>Fraud Intelligence Console</h1>
             <p>Real-time risk analytics, explainability, and operations visibility.</p>
           </div>
-          <div className="user-pill">Risk Ops · Analyst</div>
+          <div className="user-pill">
+            {user.email} · {user.role}
+          </div>
         </header>
         <main>
           <Outlet />
