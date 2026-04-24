@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { RiskGauge } from "../components/RiskGauge";
+import { fetchExplanation, fetchScore, fetchTransaction } from "../services/api";
 import { fetchExplanation, fetchScore, fetchTransactionById } from "../services/api";
 import { fetchExplanation, fetchScore, fetchTransaction } from "../services/api";
 import { fetchExplanation, fetchScore, fetchTransaction, scoreTransaction } from "../services/api";
@@ -24,7 +25,14 @@ export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
 
   useEffect(() => {
     async function load() {
+      setError(null);
       try {
+        const [tx, txScore, txExplanation] = await Promise.all([
+          fetchTransaction(token, txId),
+          fetchScore(token, txId),
+          fetchExplanation(token, txId),
+        ]);
+        setTransaction(tx);
         const [txDetail, txScore, txExplanation] = await Promise.all([
           fetchTransactionById(token, txId),
           fetchScore(token, txId),
@@ -52,6 +60,9 @@ export function TransactionDetailPage({ token }: TransactionDetailPageProps) {
           setExplanation(null);
         }
       } catch (err) {
+        setTransaction(null);
+        setScore(null);
+        setExplanation(null);
         setError(err instanceof Error ? err.message : "Unable to load detail");
       }
     }
