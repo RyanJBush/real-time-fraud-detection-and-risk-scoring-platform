@@ -84,6 +84,27 @@ export function DashboardPage({ token }: DashboardPageProps) {
       })),
     [trends]
   );
+
+    load();
+  }, [token]);
+
+  const fraudTrend = useMemo(
+    () =>
+      (trends?.fraud_trend ?? []).map((point) => ({
+        date: point.date,
+        fraudRate: Number((point.fraud_rate * 100).toFixed(2)),
+      })),
+    [trends]
+  );
+
+  const riskyCountries = useMemo(
+    () =>
+      (trends?.top_risky_countries ?? []).map((row) => ({
+        name: row.name,
+        value: row.risk_events,
+      })),
+    [trends]
+  );
   const { data, loading, error, kpis } = useFraudData(token);
 
   const volumeByCountry = Object.entries(
@@ -145,6 +166,10 @@ export function DashboardPage({ token }: DashboardPageProps) {
 
       <article className="panel">
         <h2>Top Risky Countries</h2>
+        <ResponsiveContainer width="100%" height={280}>
+          <PieChart>
+            <Pie
+              data={riskyCountries}
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie

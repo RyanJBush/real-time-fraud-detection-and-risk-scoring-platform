@@ -144,6 +144,7 @@ export async function fetchScoreIfExists(token: string, transactionId: number): 
     headers: { ...authHeaders(token) },
   });
 
+
   if (response.status === 404) {
     return scoreTransaction(token, transactionId);
   }

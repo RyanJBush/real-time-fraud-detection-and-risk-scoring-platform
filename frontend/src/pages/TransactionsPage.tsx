@@ -148,6 +148,18 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
               <th>Risk</th>
               <th>Decision</th>
               <th>Actions</th>
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>TX ID</th>
+              <th>Merchant</th>
+              <th>Country</th>
+              <th>Card</th>
+              <th>Amount</th>
+              <th>Risk</th>
+              <th>Decision</th>
+              <th>Actions</th>
     <div className="panel">
       <div className="toolbar">
         <input
