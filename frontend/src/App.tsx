@@ -25,6 +25,7 @@ export default function App() {
         return;
       }
 
+      setAuthLoading(true);
       try {
         const me = await fetchMe(token);
         setUser(me);
@@ -42,6 +43,7 @@ export default function App() {
 
   function handleLogin(nextToken: string) {
     localStorage.setItem("meridian_token", nextToken);
+    setAuthLoading(true);
     setToken(nextToken);
   }
 
