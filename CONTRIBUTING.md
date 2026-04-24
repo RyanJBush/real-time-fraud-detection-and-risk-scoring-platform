@@ -5,7 +5,7 @@
 - Frontend: `cd frontend && npm install`
 
 ## Development
-- Run all checks: `make check` (includes frontend typecheck)
+- Run all checks: `make check`
 - Start stack: `docker compose up --build`
 
 ## Branching
