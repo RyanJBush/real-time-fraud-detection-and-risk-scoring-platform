@@ -47,6 +47,20 @@ a {
   gap: 0.5rem;
 }
 
+.logout-btn {
+  margin-top: auto;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
 .nav-link {
   color: #cbd5e1;
   padding: 0.65rem 0.8rem;
@@ -372,7 +386,95 @@ select {
   }
 
   .page-grid,
-  .detail-grid {
+  .detail-grid,
+  .review-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+.transactions-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.create-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+}
+
+.create-form button,
+.inline-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 0.5rem 0.65rem;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+}
+
+.create-form button:disabled,
+.inline-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.inline-btn {
+  background: #334155;
+  font-size: 0.8rem;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+
+.review-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1rem;
+}
+
+.review-list,
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.review-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.review-item.active {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.review-item p,
+.history-list p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.review-actions {
+  margin: 0.8rem 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.review-actions h3 {
+  margin: 0;
+  font-size: 0.92rem;
 }
