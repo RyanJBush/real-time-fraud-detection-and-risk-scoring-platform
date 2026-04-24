@@ -18,6 +18,8 @@ const initialForm = {
 
 export function TransactionsPage({ token }: TransactionsPageProps) {
   const { data, loading, error, runScore, refresh } = useFraudData(token);
+export function TransactionsPage({ token }: TransactionsPageProps) {
+  const { data, loading, error } = useFraudData(token);
   const [query, setQuery] = useState("");
   const [decision, setDecision] = useState("all");
   const [submitting, setSubmitting] = useState(false);
@@ -134,6 +136,71 @@ export function TransactionsPage({ token }: TransactionsPageProps) {
               <th>Risk</th>
               <th>Decision</th>
               <th>Actions</th>
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>TX ID</th>
+              <th>Merchant</th>
+              <th>Country</th>
+              <th>Card</th>
+              <th>Amount</th>
+              <th>Risk</th>
+              <th>Decision</th>
+              <th>Actions</th>
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>TX ID</th>
+              <th>Merchant</th>
+              <th>Country</th>
+              <th>Card</th>
+              <th>Amount</th>
+              <th>Risk</th>
+              <th>Decision</th>
+              <th>Actions</th>
+    <div className="panel">
+      <div className="toolbar">
+        <input
+          placeholder="Search by transaction/merchant/country/card"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select value={decision} onChange={(e) => setDecision(e.target.value)}>
+          <option value="all">All decisions</option>
+          <option value="approve">Approve</option>
+          <option value="review">Review</option>
+          <option value="decline">Decline</option>
+        </select>
+      </div>
+
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>TX ID</th>
+            <th>Merchant</th>
+            <th>Country</th>
+            <th>Card</th>
+            <th>Amount</th>
+            <th>Risk</th>
+            <th>Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map(({ transaction, score }) => (
+            <tr key={transaction.id}>
+              <td>
+                <Link to={`/transactions/${transaction.id}`}>#{transaction.id}</Link>
+              </td>
+              <td>{transaction.merchant}</td>
+              <td>{transaction.country}</td>
+              <td>****{transaction.card_last4}</td>
+              <td>${transaction.amount.toFixed(2)}</td>
+              <td>
+                <RiskBadge risk={score.final_score} />
+              </td>
+              <td className={`text-${score.decision}`}>{score.decision}</td>
             </tr>
           </thead>
           <tbody>
