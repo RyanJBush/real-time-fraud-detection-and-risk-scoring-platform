@@ -57,6 +57,13 @@ export async function fetchMe(token: string): Promise<User> {
   return handleResponse<User>(response);
 }
 
+
+export async function fetchTransactionById(token: string, transactionId: number): Promise<Transaction> {
+  const response = await fetch(`${API_BASE}/transactions/${transactionId}`, {
+    headers: { ...authHeaders(token) },
+  });
+  return handleResponse<Transaction>(response);
+}
 export async function createTransaction(token: string, payload: TransactionCreate): Promise<Transaction> {
   const response = await fetch(`${API_BASE}/transactions`, {
     method: "POST",
