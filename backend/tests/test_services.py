@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.ml import build_explanation_summary, extract_features, shap_explanation
+from app.ml import FEATURES, MODEL, build_explanation_summary, extract_features, shap_explanation
 from app.models import (
     BackgroundJob,
     DecisionTrace,
@@ -676,20 +676,24 @@ def test_shap_explanation_import_fallback(monkeypatch: pytest.MonkeyPatch) -> No
     shap_values, top_factors = shap_explanation(features)
     assert len(shap_values) == 4
     assert top_factors
+    expected = MODEL.coef_[0] * features
+    assert shap_values["amount"] == pytest.approx(float(expected[0]))
+    assert shap_values["is_high_amount"] == pytest.approx(float(expected[1]))
+    assert set(top_factors).issubset(set(FEATURES))
 
 
 def test_shap_explanation_list_return_values(monkeypatch: pytest.MonkeyPatch) -> None:
     features = extract_features(4500, "US", "luxury-goods")
     original_import = builtins.__import__
 
-    class FakeExplainer:
+    class FakeLinearExplainer:
         def __init__(self, *_args, **_kwargs):
             pass
 
         def shap_values(self, _features):
             return [np.array([1.0, -2.0, 3.0, -4.0], dtype=float)]
 
-    fake_shap = types.SimpleNamespace(LinearExplainer=FakeExplainer)
+    fake_shap = types.SimpleNamespace(LinearExplainer=FakeLinearExplainer)
 
     def import_fake_shap(name, *args, **kwargs):
         if name == "shap":

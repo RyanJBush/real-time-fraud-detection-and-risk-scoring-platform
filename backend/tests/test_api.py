@@ -294,7 +294,7 @@ def test_feature_service_and_rules_management(client: TestClient) -> None:
     assert retried_job.json()["parent_job_id"] == refresh_payload["job_id"]
     assert retried_job.json()["attempts"] >= 2
 
-    rule_name = f"velocity_watch_{uuid.uuid4().hex[:8]}"
+    rule_name = f"rule_test_{uuid.uuid4().hex[:8]}"
     created_rule = client.post(
         "/api/rules",
         headers=admin_headers,
@@ -380,7 +380,7 @@ def test_retry_non_refresh_job_returns_400(client: TestClient) -> None:
 
 def test_duplicate_rule_and_missing_rule_update(client: TestClient) -> None:
     headers = auth_headers(client, "admin@meridian.ai", "password123")
-    rule_name = f"dup-check-rule-{uuid.uuid4().hex[:8]}"
+    rule_name = f"rule_test_{uuid.uuid4().hex[:8]}"
     created = client.post(
         "/api/rules",
         headers=headers,
