@@ -677,6 +677,9 @@ def test_metrics_for_threshold_handles_no_negatives() -> None:
 
 
 def test_scenario_seed_and_ai_suggestion_edges() -> None:
+    review_confidence = 0.72
+    approve_confidence = 0.68
+
     with pytest.raises(ScenarioSeedError, match="Unknown scenario"):
         generate_seeded_transactions("not-a-scenario", count=1, seed=1)
 
@@ -693,7 +696,7 @@ def test_scenario_seed_and_ai_suggestion_edges() -> None:
     approve_suggestion = generate_review_suggestion(approve_score, trace=None)
 
     assert review_suggestion["suggested_decision"] == "review"
-    assert review_suggestion["confidence"] == 0.72  # 0.45 <= final_score < 0.82 branch
+    assert review_suggestion["confidence"] == review_confidence  # 0.45 <= final_score < 0.82 branch
     assert "dominant signal model_score" in review_suggestion["rationale"]
     assert approve_suggestion["suggested_decision"] == "approve"
-    assert approve_suggestion["confidence"] == 0.68  # final_score < 0.45 branch
+    assert approve_suggestion["confidence"] == approve_confidence  # final_score < 0.45 branch
