@@ -38,7 +38,12 @@ from app.services.feature_service import (
 )
 from app.services.fraud_engine import evaluate_hybrid_decision
 from app.services.jobs import create_job, job_summary, set_job_status
-from app.services.model_eval import _metrics_for_threshold, build_labeled_dataset, evaluate_candidate_models
+from app.services.model_eval import (
+    FN_COST_MULTIPLIER,
+    _metrics_for_threshold,
+    build_labeled_dataset,
+    evaluate_candidate_models,
+)
 from app.services.pii import mask_card_last4, mask_email, sanitize_payload
 from app.services.scenario_seed import ScenarioSeedError, generate_seeded_transactions
 from app.services.review_workflow import apply_override, assign_review_case, upsert_review_case
@@ -651,7 +656,8 @@ def test_evaluate_candidate_models_with_fallback_and_estimator(monkeypatch: pyte
 
     assert len(results) == 2
     assert by_model["simple_linear"].samples == 14
-    assert by_model["simple_linear"].optimal_threshold == 0.7  # highest F1 / lowest cost for this fixture
+    # 0.7 cleanly separates 0.05 (non-fraud) vs 0.95 (fraud) in this fixture's predicted probabilities.
+    assert by_model["simple_linear"].optimal_threshold == 0.7
     assert by_model["simple_linear"].auc > 0
     assert by_model["xgboost"].model_version == "xgb_unavailable"
     assert by_model["xgboost"].notes == "xgboost unavailable"
@@ -666,7 +672,7 @@ def test_metrics_for_threshold_handles_no_negatives() -> None:
     assert recall == pytest.approx(2 / 3)
     assert f1 == pytest.approx(0.8)
     assert false_positive_rate == 0.0
-    expected_cost = 5.0  # one false negative * FN_COST_MULTIPLIER (5.0)
+    expected_cost = float(FN_COST_MULTIPLIER)  # one false negative * FN cost multiplier
     assert cost == expected_cost
 
 
@@ -687,7 +693,7 @@ def test_scenario_seed_and_ai_suggestion_edges() -> None:
     approve_suggestion = generate_review_suggestion(approve_score, trace=None)
 
     assert review_suggestion["suggested_decision"] == "review"
-    assert review_suggestion["confidence"] == 0.72
+    assert review_suggestion["confidence"] == 0.72  # 0.45 <= final_score < 0.82 branch
     assert "dominant signal model_score" in review_suggestion["rationale"]
     assert approve_suggestion["suggested_decision"] == "approve"
-    assert approve_suggestion["confidence"] == 0.68
+    assert approve_suggestion["confidence"] == 0.68  # final_score < 0.45 branch
