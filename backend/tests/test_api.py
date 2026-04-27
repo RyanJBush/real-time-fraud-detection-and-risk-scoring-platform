@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -292,10 +294,11 @@ def test_feature_service_and_rules_management(client: TestClient) -> None:
     assert retried_job.json()["parent_job_id"] == refresh_payload["job_id"]
     assert retried_job.json()["attempts"] >= 2
 
+    rule_name = f"velocity_watch_{uuid.uuid4().hex[:8]}"
     created_rule = client.post(
         "/api/rules",
         headers=admin_headers,
-        json={"name": "velocity_watch", "condition": "velocity_1h >= 4", "action": "review"},
+        json={"name": rule_name, "condition": "velocity_1h >= 4", "action": "review"},
     )
     assert created_rule.status_code == 200
     rule_id = created_rule.json()["id"]
@@ -377,17 +380,18 @@ def test_retry_non_refresh_job_returns_400(client: TestClient) -> None:
 
 def test_duplicate_rule_and_missing_rule_update(client: TestClient) -> None:
     headers = auth_headers(client, "admin@meridian.ai", "password123")
+    rule_name = f"dup-check-rule-{uuid.uuid4().hex[:8]}"
     created = client.post(
         "/api/rules",
         headers=headers,
-        json={"name": "dup-check-rule", "condition": "amount > 10", "action": "review"},
+        json={"name": rule_name, "condition": "amount > 10", "action": "review"},
     )
     assert created.status_code == 200
 
     duplicate = client.post(
         "/api/rules",
         headers=headers,
-        json={"name": "dup-check-rule", "condition": "amount > 99", "action": "decline"},
+        json={"name": rule_name, "condition": "amount > 99", "action": "decline"},
     )
     assert duplicate.status_code == 400
     assert duplicate.json()["detail"] == "Rule with this name already exists"
