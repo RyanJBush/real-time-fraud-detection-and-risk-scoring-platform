@@ -1,7 +1,10 @@
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
+import numpy as np
 import pytest
+from fastapi import HTTPException
+from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -14,6 +17,16 @@ from app.models import (
     RiskScore,
     Transaction,
     TransactionLabel,
+    User,
+)
+from app.security import (
+    ALGORITHM,
+    SECRET_KEY,
+    create_access_token,
+    get_current_user,
+    get_password_hash,
+    require_roles,
+    verify_password,
 )
 from app.services.ai_assist import generate_group_summary, generate_review_suggestion
 from app.services.analytics import build_case_groups, build_trend_summary
@@ -25,7 +38,9 @@ from app.services.feature_service import (
 )
 from app.services.fraud_engine import evaluate_hybrid_decision
 from app.services.jobs import create_job, job_summary, set_job_status
+from app.services.model_eval import _metrics_for_threshold, build_labeled_dataset, evaluate_candidate_models
 from app.services.pii import mask_card_last4, mask_email, sanitize_payload
+from app.services.scenario_seed import ScenarioSeedError, generate_seeded_transactions
 from app.services.review_workflow import apply_override, assign_review_case, upsert_review_case
 
 
@@ -563,3 +578,114 @@ def test_pii_audit_and_ai_assist_helpers(db_session: Session) -> None:
     )
     assert "Cluster 1111:merchant:US has 2 related transactions" in group_summary
     assert "Average amount is 75.00" in group_summary
+
+
+def test_security_helpers_and_guards(db_session: Session) -> None:
+    hashed_password = get_password_hash("password123")
+    assert verify_password("password123", hashed_password)
+    assert not verify_password("wrong-password", hashed_password)
+
+    user = User(email="admin@meridian.ai", hashed_password=hashed_password, role="Admin")
+    db_session.add(user)
+    db_session.flush()
+
+    token = create_access_token(user.email)
+    current_user = get_current_user(token=token, db=db_session)
+    assert current_user.id == user.id
+
+    assert require_roles("Admin")(user=user).id == user.id
+    with pytest.raises(HTTPException, match="Forbidden"):
+        require_roles("Analyst")(user=user)
+
+    missing_sub_token = jwt.encode(
+        {"exp": datetime.now(UTC) + timedelta(minutes=5)},
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+    with pytest.raises(HTTPException, match="Could not validate credentials"):
+        get_current_user(token=missing_sub_token, db=db_session)
+
+    with pytest.raises(HTTPException, match="Could not validate credentials"):
+        get_current_user(token=create_access_token("missing@meridian.ai"), db=db_session)
+
+    with pytest.raises(HTTPException, match="Could not validate credentials"):
+        get_current_user(token="invalid-token", db=db_session)
+
+
+def test_build_labeled_dataset_empty_and_missing_transaction(db_session: Session) -> None:
+    x_empty, y_empty = build_labeled_dataset(db_session)
+    assert x_empty.shape == (0, 4)
+    assert y_empty.shape == (0,)
+
+    db_session.add(TransactionLabel(transaction_id=99999, label="confirmed_fraud", source="simulation"))
+    db_session.flush()
+    x_missing, y_missing = build_labeled_dataset(db_session)
+    assert x_missing.shape == (0, 4)
+    assert y_missing.shape == (0,)
+
+
+def test_evaluate_candidate_models_with_fallback_and_estimator(monkeypatch: pytest.MonkeyPatch) -> None:
+    x = np.array([[0.05, 0.0, 0.0, 0.0], [0.95, 1.0, 1.0, 1.0]] * 7, dtype=float)
+    y = np.array([0, 1] * 7, dtype=int)
+
+    class FakeEstimator:
+        def fit(self, x_train: np.ndarray, y_train: np.ndarray) -> "FakeEstimator":
+            return self
+
+        def predict_proba(self, x_test: np.ndarray) -> np.ndarray:
+            fraud_probability = np.clip(x_test[:, 0], 0.0, 1.0)
+            return np.column_stack((1.0 - fraud_probability, fraud_probability))
+
+    monkeypatch.setattr("app.services.model_eval.build_labeled_dataset", lambda db: (x, y))
+    monkeypatch.setattr(
+        "app.services.model_eval._available_models",
+        lambda: [
+            ("simple_linear", "simple_v1", FakeEstimator(), ""),
+            ("xgboost", "xgb_unavailable", None, "xgboost unavailable"),
+        ],
+    )
+
+    results = evaluate_candidate_models(db=None)
+    by_model = {result.model_key: result for result in results}
+
+    assert len(results) == 2
+    assert by_model["simple_linear"].samples == 14
+    assert by_model["simple_linear"].optimal_threshold in {0.3, 0.4, 0.5, 0.6, 0.7}
+    assert by_model["simple_linear"].auc > 0
+    assert by_model["xgboost"].model_version == "xgb_unavailable"
+    assert by_model["xgboost"].notes == "xgboost unavailable"
+
+
+def test_metrics_for_threshold_handles_no_negatives() -> None:
+    y_true = np.array([1, 1, 1], dtype=int)
+    y_prob = np.array([0.9, 0.2, 0.8], dtype=float)
+
+    precision, recall, f1, false_positive_rate, cost = _metrics_for_threshold(y_true, y_prob, threshold=0.5)
+    assert precision == 1.0
+    assert recall == pytest.approx(2 / 3)
+    assert f1 == pytest.approx(0.8)
+    assert false_positive_rate == 0.0
+    assert cost == 5.0
+
+
+def test_scenario_seed_and_ai_suggestion_edges() -> None:
+    with pytest.raises(ScenarioSeedError, match="Unknown scenario"):
+        generate_seeded_transactions("not-a-scenario", count=1, seed=1)
+
+    first_batch = generate_seeded_transactions("merchant_takeover", count=6, seed=11)
+    second_batch = generate_seeded_transactions("merchant_takeover", count=6, seed=11)
+    assert [(row.card_last4, label) for row, label in first_batch] == [
+        (row.card_last4, label) for row, label in second_batch
+    ]
+    assert sum(1 for _, label in first_batch if label == "chargeback") == 2
+
+    review_score = RiskScore(transaction_id=1, model_score=0.4, final_score=0.5, decision="review")
+    approve_score = RiskScore(transaction_id=2, model_score=0.2, final_score=0.2, decision="approve")
+    review_suggestion = generate_review_suggestion(review_score, trace=None)
+    approve_suggestion = generate_review_suggestion(approve_score, trace=None)
+
+    assert review_suggestion["suggested_decision"] == "review"
+    assert review_suggestion["confidence"] == 0.72
+    assert "dominant signal model_score" in review_suggestion["rationale"]
+    assert approve_suggestion["suggested_decision"] == "approve"
+    assert approve_suggestion["confidence"] == 0.68
