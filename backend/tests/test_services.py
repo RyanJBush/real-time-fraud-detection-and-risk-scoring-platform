@@ -585,7 +585,7 @@ def test_security_helpers_and_guards(db_session: Session) -> None:
     assert verify_password("password123", hashed_password)
     assert not verify_password("wrong-password", hashed_password)
 
-    user = User(email="admin@meridian.ai", hashed_password=hashed_password, role="Admin")
+    user = User(email="admin@example.com", hashed_password=hashed_password, role="Admin")
     db_session.add(user)
     db_session.flush()
 
@@ -606,7 +606,7 @@ def test_security_helpers_and_guards(db_session: Session) -> None:
         get_current_user(token=missing_sub_token, db=db_session)
 
     with pytest.raises(HTTPException, match="Could not validate credentials"):
-        get_current_user(token=create_access_token("missing@meridian.ai"), db=db_session)
+        get_current_user(token=create_access_token("missing@example.com"), db=db_session)
 
     with pytest.raises(HTTPException, match="Could not validate credentials"):
         get_current_user(token="invalid-token", db=db_session)
@@ -625,8 +625,9 @@ def test_build_labeled_dataset_empty_and_missing_transaction(db_session: Session
 
 
 def test_evaluate_candidate_models_with_fallback_and_estimator(monkeypatch: pytest.MonkeyPatch) -> None:
-    x = np.array([[0.05, 0.0, 0.0, 0.0], [0.95, 1.0, 1.0, 1.0]] * 7, dtype=float)
-    y = np.array([0, 1] * 7, dtype=int)
+    sample_pairs = 7
+    x = np.array([[0.05, 0.0, 0.0, 0.0], [0.95, 1.0, 1.0, 1.0]] * sample_pairs, dtype=float)
+    y = np.array([0, 1] * sample_pairs, dtype=int)
 
     class FakeEstimator:
         def fit(self, x_train: np.ndarray, y_train: np.ndarray) -> "FakeEstimator":
@@ -650,7 +651,7 @@ def test_evaluate_candidate_models_with_fallback_and_estimator(monkeypatch: pyte
 
     assert len(results) == 2
     assert by_model["simple_linear"].samples == 14
-    assert by_model["simple_linear"].optimal_threshold in {0.3, 0.4, 0.5, 0.6, 0.7}
+    assert by_model["simple_linear"].optimal_threshold == 0.7  # highest F1 / lowest cost for this fixture
     assert by_model["simple_linear"].auc > 0
     assert by_model["xgboost"].model_version == "xgb_unavailable"
     assert by_model["xgboost"].notes == "xgboost unavailable"
@@ -665,7 +666,8 @@ def test_metrics_for_threshold_handles_no_negatives() -> None:
     assert recall == pytest.approx(2 / 3)
     assert f1 == pytest.approx(0.8)
     assert false_positive_rate == 0.0
-    assert cost == 5.0
+    expected_cost = 5.0  # one false negative * FN_COST_MULTIPLIER (5.0)
+    assert cost == expected_cost
 
 
 def test_scenario_seed_and_ai_suggestion_edges() -> None:
