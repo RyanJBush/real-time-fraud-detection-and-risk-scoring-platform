@@ -1,11 +1,16 @@
 import json
+import builtins
+import types
 from datetime import datetime, timedelta
 
+import numpy as np
 import pytest
+from sklearn.linear_model import LogisticRegression
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.db import Base
+from app.ml import FEATURES, MODEL, build_explanation_summary, extract_features, shap_explanation
 from app.models import (
     BackgroundJob,
     DecisionTrace,
@@ -25,8 +30,14 @@ from app.services.feature_service import (
 )
 from app.services.fraud_engine import evaluate_hybrid_decision
 from app.services.jobs import create_job, job_summary, set_job_status
+from app.services.model_eval import (
+    _metrics_for_threshold,
+    build_labeled_dataset,
+    evaluate_candidate_models,
+)
 from app.services.pii import mask_card_last4, mask_email, sanitize_payload
 from app.services.review_workflow import apply_override, assign_review_case, upsert_review_case
+from app.services.scenario_seed import ScenarioSeedError, generate_seeded_transactions
 
 
 @pytest.fixture
@@ -563,3 +574,138 @@ def test_pii_audit_and_ai_assist_helpers(db_session: Session) -> None:
     )
     assert "Cluster 1111:merchant:US has 2 related transactions" in group_summary
     assert "Average amount is 75.00" in group_summary
+
+
+def test_build_labeled_dataset_skips_missing_transaction_rows(db_session: Session) -> None:
+    tx = _create_transaction(db_session, amount=65, merchant="books", country="US")
+    db_session.add_all(
+        [
+            TransactionLabel(transaction_id=tx.id, label="confirmed_fraud", source="test"),
+            TransactionLabel(transaction_id=999999, label="confirmed_fraud", source="test"),
+        ]
+    )
+    db_session.flush()
+
+    x, y = build_labeled_dataset(db_session)
+    assert x.shape == (1, 4)
+    assert y.tolist() == [1]
+
+
+def test_evaluate_candidate_models_requires_balanced_labels(db_session: Session) -> None:
+    for idx in range(12):
+        tx = _create_transaction(db_session, amount=6000 + idx, merchant="crypto-exchange", country="IR")
+        db_session.add(TransactionLabel(transaction_id=tx.id, label="confirmed_fraud", source="seeded"))
+    db_session.flush()
+
+    assert evaluate_candidate_models(db_session) == []
+
+
+def test_evaluate_candidate_models_includes_unavailable_estimator(monkeypatch: pytest.MonkeyPatch, db_session: Session) -> None:
+    for idx in range(16):
+        tx = _create_transaction(
+            db_session,
+            amount=100 + (idx * 400),
+            merchant="crypto-exchange" if idx % 2 else "groceries",
+            country="IR" if idx % 2 else "US",
+        )
+        label = "confirmed_fraud" if idx % 2 else "cleared"
+        db_session.add(TransactionLabel(transaction_id=tx.id, label=label, source="test"))
+    db_session.flush()
+
+    def fake_models() -> list[tuple[str, str, object, str]]:
+        return [
+            ("xgboost", "xgb_unavailable", None, "xgboost is unavailable"),
+            ("logistic_regression", "logreg_test", LogisticRegression(max_iter=500), ""),
+        ]
+
+    monkeypatch.setattr("app.services.model_eval._available_models", fake_models)
+    rows = evaluate_candidate_models(db_session)
+
+    assert len(rows) == 2
+    unavailable = next(row for row in rows if row.model_version == "xgb_unavailable")
+    assert unavailable.notes == "xgboost is unavailable"
+    assert unavailable.samples == 16
+    assert any(row.model_key == "logistic_regression" for row in rows)
+
+
+def test_metrics_for_threshold_handles_all_positive_labels() -> None:
+    y_true = np.array([1, 1, 1], dtype=int)
+    y_prob = np.array([0.1, 0.9, 0.7], dtype=float)
+    precision, recall, f1, fpr, cost = _metrics_for_threshold(y_true, y_prob, 0.5)
+
+    assert precision == 1.0
+    assert recall == pytest.approx(2 / 3)
+    assert f1 > 0
+    assert fpr == 0.0
+    assert cost == 5.0
+
+
+def test_scenario_seed_rejects_unknown_scenario() -> None:
+    with pytest.raises(ScenarioSeedError, match="Unknown scenario"):
+        generate_seeded_transactions("unknown_scenario", count=3, seed=1)
+
+
+def test_generate_review_suggestion_review_and_approve_paths() -> None:
+    review_suggestion = generate_review_suggestion(
+        RiskScore(transaction_id=1, model_score=0.3, final_score=0.6, decision="review"),
+        None,
+    )
+    assert review_suggestion["suggested_decision"] == "review"
+    assert review_suggestion["confidence"] == 0.72
+    assert "dominant signal model_score" in review_suggestion["rationale"]
+
+    approve_suggestion = generate_review_suggestion(
+        RiskScore(transaction_id=1, model_score=0.2, final_score=0.2, decision="approve"),
+        None,
+    )
+    assert approve_suggestion["suggested_decision"] == "approve"
+    assert approve_suggestion["confidence"] == 0.68
+
+
+def test_shap_explanation_import_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    features = extract_features(4500, "US", "luxury-goods")
+
+    original_import = builtins.__import__
+
+    def import_without_shap(name, *args, **kwargs):
+        if name == "shap":
+            raise ImportError("forced missing shap")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_shap)
+    shap_values, top_factors = shap_explanation(features)
+    assert len(shap_values) == 4
+    assert top_factors
+    expected = MODEL.coef_[0] * features
+    assert shap_values["amount"] == pytest.approx(float(expected[0]))
+    assert shap_values["is_high_amount"] == pytest.approx(float(expected[1]))
+    assert set(top_factors).issubset(set(FEATURES))
+
+
+def test_shap_explanation_list_return_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    features = extract_features(4500, "US", "luxury-goods")
+    original_import = builtins.__import__
+
+    class FakeLinearExplainer:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def shap_values(self, _features):
+            return [np.array([1.0, -2.0, 3.0, -4.0], dtype=float)]
+
+    fake_shap = types.SimpleNamespace(LinearExplainer=FakeLinearExplainer)
+
+    def import_fake_shap(name, *args, **kwargs):
+        if name == "shap":
+            return fake_shap
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_fake_shap)
+    list_values, list_top_factors = shap_explanation(features)
+    assert list_values["merchant_risk"] == -4.0
+    assert list_top_factors[0] == "merchant_risk"
+
+
+def test_build_explanation_summary_handles_missing_factors() -> None:
+    summary = build_explanation_summary({}, [], "review")
+    assert summary == "Decision review was made with limited model feature attribution."

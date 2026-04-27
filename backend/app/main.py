@@ -936,6 +936,15 @@ def list_jobs(
 
 
 @app.get(
+    "/api/jobs/summary",
+    response_model=JobSummaryResponse,
+    dependencies=[Depends(require_roles("Admin", "Analyst"))],
+)
+def get_job_summary(db: Session = Depends(get_db)) -> JobSummaryResponse:
+    return JobSummaryResponse(**job_summary(db))
+
+
+@app.get(
     "/api/jobs/{job_id}",
     response_model=BackgroundJobOut,
     dependencies=[Depends(require_roles("Admin", "Analyst"))],
@@ -1006,15 +1015,6 @@ def retry_job(job_id: int, background_tasks: BackgroundTasks, db: Session = Depe
 
     background_tasks.add_task(_refresh_job, retried.id, window_hours)
     return JobRetryResponse(retried_from_job_id=job_id, new_job_id=retried.id, status="queued")
-
-
-@app.get(
-    "/api/jobs/summary",
-    response_model=JobSummaryResponse,
-    dependencies=[Depends(require_roles("Admin", "Analyst"))],
-)
-def get_job_summary(db: Session = Depends(get_db)) -> JobSummaryResponse:
-    return JobSummaryResponse(**job_summary(db))
 
 
 @app.get(
