@@ -628,7 +628,7 @@ def test_evaluate_candidate_models_includes_unavailable_estimator(monkeypatch: p
     assert any(row.model_key == "logistic_regression" for row in rows)
 
 
-def test_metrics_for_threshold_handles_no_negative_labels() -> None:
+def test_metrics_for_threshold_handles_all_positive_labels() -> None:
     y_true = np.array([1, 1, 1], dtype=int)
     y_prob = np.array([0.1, 0.9, 0.7], dtype=float)
     precision, recall, f1, fpr, cost = _metrics_for_threshold(y_true, y_prob, 0.5)
@@ -662,7 +662,7 @@ def test_generate_review_suggestion_review_and_approve_paths() -> None:
     assert approve_suggestion["confidence"] == 0.68
 
 
-def test_shap_explanation_fallback_and_list_outputs(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_shap_explanation_import_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     features = extract_features(4500, "US", "luxury-goods")
 
     original_import = builtins.__import__
@@ -676,6 +676,11 @@ def test_shap_explanation_fallback_and_list_outputs(monkeypatch: pytest.MonkeyPa
     shap_values, top_factors = shap_explanation(features)
     assert len(shap_values) == 4
     assert top_factors
+
+
+def test_shap_explanation_list_return_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    features = extract_features(4500, "US", "luxury-goods")
+    original_import = builtins.__import__
 
     class FakeExplainer:
         def __init__(self, *_args, **_kwargs):
