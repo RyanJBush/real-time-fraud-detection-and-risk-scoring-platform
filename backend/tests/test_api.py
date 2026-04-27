@@ -1,7 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
-from app.main import app
+from app.main import app, engine
+from app.models import BackgroundJob, Transaction, TransactionLabel
+from app.security import create_access_token
 
 
 @pytest.fixture
@@ -166,6 +169,19 @@ def test_offline_model_evaluation(client: TestClient) -> None:
         )
         assert seeded.status_code == 200
 
+    with Session(bind=engine) as db:
+        for index in range(12):
+            tx = Transaction(
+                amount=25 + index,
+                merchant="local-store",
+                country="US",
+                card_last4=f"{3000 + index}",
+            )
+            db.add(tx)
+            db.flush()
+            db.add(TransactionLabel(transaction_id=tx.id, label="cleared", source="test_seed"))
+        db.commit()
+
     evaluation = client.get("/api/models/evaluation", headers=headers)
     assert evaluation.status_code == 200
     payload = evaluation.json()
@@ -299,3 +315,87 @@ def test_feature_service_and_rules_management(client: TestClient) -> None:
     logs = client.get("/api/audit/logs?action=rule_update", headers=admin_headers)
     assert logs.status_code == 200
     assert logs.json()["total"] >= 1
+
+
+def test_auth_and_role_guards(client: TestClient) -> None:
+    invalid_login = client.post(
+        "/api/auth/login",
+        json={"email": "admin@meridian.ai", "password": "wrong-password"},
+    )
+    assert invalid_login.status_code == 401
+    assert invalid_login.json()["detail"] == "Invalid credentials"
+
+    bad_token = client.get("/api/auth/me", headers={"Authorization": "Bearer not-a-token"})
+    assert bad_token.status_code == 401
+
+    unknown_token = create_access_token("missing-user@meridian.ai")
+    unknown_user = client.get("/api/auth/me", headers={"Authorization": f"Bearer {unknown_token}"})
+    assert unknown_user.status_code == 401
+
+    viewer_headers = auth_headers(client, "viewer@meridian.ai", "password123")
+    forbidden = client.post(
+        "/api/transactions",
+        headers=viewer_headers,
+        json={"amount": 100, "merchant": "bookshop", "country": "US", "card_last4": "1000"},
+    )
+    assert forbidden.status_code == 403
+
+
+def test_not_found_and_validation_paths(client: TestClient) -> None:
+    headers = auth_headers(client, "admin@meridian.ai", "password123")
+
+    assert client.get("/api/transactions/999999", headers=headers).status_code == 404
+    assert client.get("/api/scores/999999", headers=headers).status_code == 404
+    assert client.post("/api/scores", headers=headers, json={"transaction_id": 999999}).status_code == 404
+    assert client.get("/api/explanations/999999", headers=headers).status_code == 404
+    assert client.get("/api/reviews/999999/history", headers=headers).status_code == 404
+    assert client.get("/api/cases/summary?group_key=does-not-exist", headers=headers).status_code == 404
+    assert client.get("/api/reviews/999999/suggestion", headers=headers).status_code == 404
+    assert client.get("/api/jobs/999999", headers=headers).status_code == 404
+    assert client.post("/api/jobs/999999/retry", headers=headers).status_code == 404
+
+
+def test_retry_non_refresh_job_returns_400(client: TestClient) -> None:
+    headers = auth_headers(client, "admin@meridian.ai", "password123")
+    with Session(bind=engine) as db:
+        job = BackgroundJob(
+            job_type="other_job",
+            status="completed",
+            attempts=1,
+            metadata_json="{}",
+            result_json="{}",
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        job_id = job.id
+
+    retry = client.post(f"/api/jobs/{job_id}/retry", headers=headers)
+    assert retry.status_code == 400
+    assert retry.json()["detail"] == "Only feature_refresh jobs are retryable"
+
+
+def test_duplicate_rule_and_missing_rule_update(client: TestClient) -> None:
+    headers = auth_headers(client, "admin@meridian.ai", "password123")
+    created = client.post(
+        "/api/rules",
+        headers=headers,
+        json={"name": "dup-check-rule", "condition": "amount > 10", "action": "review"},
+    )
+    assert created.status_code == 200
+
+    duplicate = client.post(
+        "/api/rules",
+        headers=headers,
+        json={"name": "dup-check-rule", "condition": "amount > 99", "action": "decline"},
+    )
+    assert duplicate.status_code == 400
+    assert duplicate.json()["detail"] == "Rule with this name already exists"
+
+    missing = client.patch(
+        "/api/rules/999999",
+        headers=headers,
+        json={"condition": "amount > 25"},
+    )
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "Rule not found"
