@@ -544,7 +544,7 @@ def test_generate_review_suggestion_approve_below_threshold() -> None:
 
 
 def test_mask_email_two_char_user() -> None:
-    """A two-character username should be fully masked."""
+    """A two-character username is short enough (≤2) that every character is replaced with *."""
     assert mask_email("ab@example.com") == "**@example.com"
 
 
@@ -553,7 +553,8 @@ def test_mask_email_single_char_user() -> None:
 
 
 def test_mask_card_last4_short_value() -> None:
-    """Values shorter than 4 chars are still prefixed with ****."""
+    """mask_card_last4 always prefixes with **** and appends whatever characters are present,
+    so inputs shorter than 4 chars keep all their digits after the **** prefix."""
     assert mask_card_last4("12") == "****12"
     assert mask_card_last4("1") == "****1"
 
