@@ -429,7 +429,7 @@ def metrics_summary(
     label_map = {label.transaction_id: label.label for label in labels}
     tx_by_id = {tx.id: tx for tx in db.query(Transaction).all()}
 
-    declined = sum(1 for s in scores if s.decision == "decline")
+    declined = sum(1 for s in scores if s.decision in {"decline", "block"})
     review = sum(1 for s in scores if s.decision == "review")
     approved = sum(1 for s in scores if s.decision == "approve")
     avg_score = (sum(s.final_score for s in scores) / len(scores)) if scores else 0.0
@@ -440,7 +440,7 @@ def metrics_summary(
     known_fraud = sum(1 for s in known_label_scores if label_map[s.transaction_id] in fraud_labels)
     fraud_rate = (known_fraud / len(known_label_scores)) if known_label_scores else 0.0
 
-    declined_with_label = [s for s in scores if s.decision == "decline" and s.transaction_id in label_map]
+    declined_with_label = [s for s in scores if s.decision in {"decline", "block"} and s.transaction_id in label_map]
     declined_non_fraud_count = sum(
         1 for s in declined_with_label if label_map[s.transaction_id] not in fraud_labels
     )
@@ -452,7 +452,7 @@ def metrics_summary(
         sum(
             tx_by_id[s.transaction_id].amount
             for s in scores
-            if s.decision == "decline"
+            if s.decision in {"decline", "block"}
             and s.transaction_id in label_map
             and label_map[s.transaction_id] in fraud_labels
             and s.transaction_id in tx_by_id

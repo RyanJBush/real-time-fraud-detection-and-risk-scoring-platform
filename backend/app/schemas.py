@@ -48,7 +48,7 @@ class ScoreOut(BaseModel):
     transaction_id: int
     model_score: float
     final_score: float
-    decision: Literal["approve", "review", "decline"]
+    decision: Literal["approve", "review", "block", "decline"]
     reason_codes: list[str] = Field(default_factory=list)
     signal_details: dict[str, float] = Field(default_factory=dict)
     model_version: str = "logreg_v2_hybrid"
@@ -107,7 +107,7 @@ class ReviewQueueResponse(BaseModel):
 
 
 class ReviewDecisionRequest(BaseModel):
-    final_decision: Literal["approve", "review", "decline"]
+    final_decision: Literal["approve", "review", "block", "decline"]
     note: str = Field(min_length=3, max_length=5000)
 
 
@@ -226,12 +226,12 @@ class AuditLogResponse(BaseModel):
 class RuleCreateRequest(BaseModel):
     name: str = Field(min_length=3, max_length=255)
     condition: str = Field(min_length=3, max_length=2000)
-    action: Literal["approve", "review", "decline"]
+    action: Literal["approve", "review", "block", "decline"]
 
 
 class RuleUpdateRequest(BaseModel):
     condition: str | None = Field(default=None, min_length=3, max_length=2000)
-    action: Literal["approve", "review", "decline"] | None = None
+    action: Literal["approve", "review", "block", "decline"] | None = None
 
 
 class RuleOut(BaseModel):
