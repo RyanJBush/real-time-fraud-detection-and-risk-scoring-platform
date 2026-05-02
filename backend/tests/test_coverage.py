@@ -592,3 +592,34 @@ def test_compute_transaction_features_amount_zscore_capped(db_session: Session) 
     tx = _create_transaction(db_session, amount=100_000.0, card_last4="2000")
     features = compute_transaction_features(db_session, tx)
     assert features["amount_zscore_proxy"] == 4.0
+
+
+def test_generate_seeded_transactions_unknown_scenario_raises() -> None:
+    from app.services.scenario_seed import ScenarioSeedError
+
+    with pytest.raises(ScenarioSeedError, match="Unknown scenario"):
+        generate_seeded_transactions("totally_unknown", count=3, seed=1)
+
+
+def test_generate_seeded_transactions_zero_count() -> None:
+    assert generate_seeded_transactions("card_testing_burst", count=0, seed=123) == []
+
+
+def test_build_case_groups_respects_limit(db_session: Session) -> None:
+    for idx in range(3):
+        tx = _create_transaction(db_session, card_last4=f"44{idx:02d}", merchant=f"m{idx}", country="US")
+        db_session.add(
+            DecisionTrace(
+                transaction_id=tx.id,
+                combined_score=0.4 + (idx * 0.1),
+                decision="review",
+                reason_codes=json.dumps(["THRESHOLD_REVIEW"]),
+                signal_details=json.dumps({}),
+                group_key=f"g-{idx}",
+                model_version="v1",
+            )
+        )
+    db_session.flush()
+
+    groups = build_case_groups(db_session, status="all", limit=2)
+    assert len(groups) == 2
