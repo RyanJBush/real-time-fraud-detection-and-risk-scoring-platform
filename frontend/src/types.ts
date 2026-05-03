@@ -45,6 +45,7 @@ export interface Score {
   model_version: string;
   threshold_approve_max: number;
   threshold_review_max: number;
+  confidence_score: number;
 }
 
 export interface RankedContribution {
@@ -65,6 +66,8 @@ export interface Explanation {
   narrative: string;
   dominant_signal: string;
   summary: string;
+  confidence_score: number;
+  why_flagged: string[];
 }
 
 export interface EnrichedTransaction {
