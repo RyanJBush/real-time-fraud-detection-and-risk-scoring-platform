@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 import logging
 import time
 import uuid
@@ -51,7 +52,9 @@ from app.schemas import (
     RiskTrendPoint,
     ReviewDecisionRequest,
     ReviewAssignRequest,
+    ReviewCommentRequest,
     ReviewEventOut,
+    MarkFraudRequest,
     ReviewQueueItem,
     ReviewQueueResponse,
     RuleCreateRequest,
@@ -629,6 +632,123 @@ def assign_case(
         details={"transaction_id": transaction_id, "assigned_email": payload.assigned_to, "note": payload.note},
     )
     db.commit()
+    return ReviewQueueItem(
+        case_id=review_case.id,
+        transaction_id=review_case.transaction_id,
+        status=review_case.status,
+        initial_decision=review_case.initial_decision,
+        final_decision=review_case.final_decision,
+        model_version=review_case.model_version,
+        reason_codes=json.loads(review_case.reason_codes),
+        explanation_summary=review_case.explanation_summary,
+        assigned_to=review_case.assigned_to,
+        analyst_notes=review_case.analyst_notes,
+        created_at=review_case.created_at,
+        updated_at=review_case.updated_at,
+        resolved_at=review_case.resolved_at,
+    )
+
+
+@app.post(
+    "/api/reviews/{transaction_id}/comment",
+    response_model=ReviewQueueItem,
+    dependencies=[Depends(require_roles("Admin", "Analyst", "Reviewer"))],
+)
+def comment_review_case(
+    transaction_id: int,
+    payload: ReviewCommentRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ReviewQueueItem:
+    review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction_id).first()
+    if not review_case:
+        raise HTTPException(status_code=404, detail="Review case not found")
+
+    review_case.analyst_notes = (
+        f"{review_case.analyst_notes}\n{payload.note}".strip() if review_case.analyst_notes else payload.note
+    )
+    review_case.updated_at = datetime.utcnow()
+    record_review_event(
+        db,
+        review_case_id=review_case.id,
+        actor_email=user.email,
+        action="commented",
+        note=payload.note,
+        details={"transaction_id": transaction_id},
+    )
+    write_audit_log(
+        db,
+        actor_email=user.email,
+        action="review_comment",
+        entity_type="review_case",
+        entity_id=str(review_case.id),
+        details={"transaction_id": transaction_id, "note": payload.note},
+    )
+    db.commit()
+    db.refresh(review_case)
+    return ReviewQueueItem(
+        case_id=review_case.id,
+        transaction_id=review_case.transaction_id,
+        status=review_case.status,
+        initial_decision=review_case.initial_decision,
+        final_decision=review_case.final_decision,
+        model_version=review_case.model_version,
+        reason_codes=json.loads(review_case.reason_codes),
+        explanation_summary=review_case.explanation_summary,
+        assigned_to=review_case.assigned_to,
+        analyst_notes=review_case.analyst_notes,
+        created_at=review_case.created_at,
+        updated_at=review_case.updated_at,
+        resolved_at=review_case.resolved_at,
+    )
+
+
+@app.post(
+    "/api/reviews/{transaction_id}/mark-fraud",
+    response_model=ReviewQueueItem,
+    dependencies=[Depends(require_roles("Admin", "Analyst", "Reviewer"))],
+)
+def mark_review_case_fraud(
+    transaction_id: int,
+    payload: MarkFraudRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ReviewQueueItem:
+    review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction_id).first()
+    if not review_case:
+        raise HTTPException(status_code=404, detail="Review case not found")
+    existing_label = db.query(TransactionLabel).filter(TransactionLabel.transaction_id == transaction_id).first()
+    if existing_label:
+        existing_label.label = payload.label
+        existing_label.source = "analyst_review"
+    else:
+        db.add(TransactionLabel(transaction_id=transaction_id, label=payload.label, source="analyst_review"))
+
+    review_case.status = "resolved"
+    review_case.final_decision = "decline"
+    review_case.analyst_notes = (
+        f"{review_case.analyst_notes}\n{payload.note}".strip() if review_case.analyst_notes else payload.note
+    )
+    review_case.updated_at = datetime.utcnow()
+    review_case.resolved_at = datetime.utcnow()
+    record_review_event(
+        db,
+        review_case_id=review_case.id,
+        actor_email=user.email,
+        action="marked_fraud",
+        note=payload.note,
+        details={"label": payload.label},
+    )
+    write_audit_log(
+        db,
+        actor_email=user.email,
+        action="review_mark_fraud",
+        entity_type="review_case",
+        entity_id=str(review_case.id),
+        details={"transaction_id": transaction_id, "label": payload.label, "note": payload.note},
+    )
+    db.commit()
+    db.refresh(review_case)
     return ReviewQueueItem(
         case_id=review_case.id,
         transaction_id=review_case.transaction_id,

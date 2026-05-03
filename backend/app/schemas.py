@@ -119,6 +119,15 @@ class ReviewAssignRequest(BaseModel):
     note: str = Field(default="Assigned for manual review.", min_length=3, max_length=5000)
 
 
+class ReviewCommentRequest(BaseModel):
+    note: str = Field(min_length=3, max_length=5000)
+
+
+class MarkFraudRequest(BaseModel):
+    label: Literal["confirmed_fraud", "suspected_fraud", "chargeback"] = "confirmed_fraud"
+    note: str = Field(default="Marked as fraud by analyst.", min_length=3, max_length=5000)
+
+
 class ReviewEventOut(BaseModel):
     id: int
     actor_email: str
