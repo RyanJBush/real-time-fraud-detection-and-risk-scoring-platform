@@ -732,6 +732,15 @@ def mark_review_case_fraud(
     )
     review_case.updated_at = datetime.utcnow()
     review_case.resolved_at = datetime.utcnow()
+    tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if tx:
+        tx.status = "decline"
+    score_row = db.query(RiskScore).filter(RiskScore.transaction_id == transaction_id).first()
+    if score_row:
+        score_row.decision = "decline"
+    trace_row = db.query(DecisionTrace).filter(DecisionTrace.transaction_id == transaction_id).first()
+    if trace_row:
+        trace_row.decision = "decline"
     record_review_event(
         db,
         review_case_id=review_case.id,
@@ -921,6 +930,10 @@ def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSi
         features = extract_features(tx.amount, tx.country, tx.merchant)
         model_score = score_transaction(features)
         decision_ctx = evaluate_hybrid_decision(tx, model_score, db)
+        existing_score = db.query(RiskScore).filter(RiskScore.transaction_id == tx.id).first()
+        if existing_score:
+            db.delete(existing_score)
+        db.add(
         db.merge(
             RiskScore(
                 transaction_id=tx.id,
@@ -929,6 +942,10 @@ def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSi
                 decision=decision_ctx.decision,
             )
         )
+        existing_trace = db.query(DecisionTrace).filter(DecisionTrace.transaction_id == tx.id).first()
+        if existing_trace:
+            db.delete(existing_trace)
+        db.add(
         db.merge(
             DecisionTrace(
                 transaction_id=tx.id,
@@ -939,6 +956,14 @@ def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSi
                 group_key=decision_ctx.group_key,
                 model_version=MODEL_VERSION,
             )
+        )
+        upsert_review_case(
+            db,
+            transaction=tx,
+            decision=decision_ctx.decision,
+            reason_codes=decision_ctx.reason_codes,
+            model_version=MODEL_VERSION,
+            explanation_summary=f"Demo simulation decision={decision_ctx.decision}, score={decision_ctx.combined_score:.3f}",
         )
         tx.status = decision_ctx.decision
         scored_count += 1
