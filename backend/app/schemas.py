@@ -129,7 +129,14 @@ class ReviewEventOut(BaseModel):
 
 
 class SeedScenarioRequest(BaseModel):
-    scenario: Literal["card_testing_burst", "high_value_geo_attack", "merchant_takeover"]
+    scenario: Literal[
+        "card_testing_burst",
+        "high_value_geo_attack",
+        "merchant_takeover",
+        "stolen_card",
+        "bot_activity",
+        "account_takeover",
+    ]
     count: int = Field(default=25, ge=1, le=500)
     seed: int = Field(default=42)
 
@@ -138,6 +145,14 @@ class SeedScenarioResponse(BaseModel):
     scenario: str
     count: int
     seed: int
+    transaction_ids: list[int]
+
+
+class StreamSimulationResponse(BaseModel):
+    scenario: str
+    total_generated: int
+    batches: int
+    batch_size: int
     transaction_ids: list[int]
 
 

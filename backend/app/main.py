@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import uuid
+from typing import Literal
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi import Request, Response
@@ -58,6 +59,7 @@ from app.schemas import (
     RuleUpdateRequest,
     SeedScenarioRequest,
     SeedScenarioResponse,
+    StreamSimulationResponse,
     FeatureRefreshResponse,
     FeatureSnapshotOut,
     BackgroundJobListResponse,
@@ -705,6 +707,62 @@ def seed_scenarios(payload: SeedScenarioRequest, db: Session = Depends(get_db)) 
         scenario=payload.scenario,
         count=len(transaction_ids),
         seed=payload.seed,
+        transaction_ids=transaction_ids,
+    )
+
+
+@app.post(
+    "/api/simulations/stream",
+    response_model=StreamSimulationResponse,
+    dependencies=[Depends(require_roles("Admin", "Analyst"))],
+)
+def stream_simulation(
+    scenario: Literal[
+        "card_testing_burst",
+        "high_value_geo_attack",
+        "merchant_takeover",
+        "stolen_card",
+        "bot_activity",
+        "account_takeover",
+    ],
+    total: int = 100,
+    batch_size: int = 20,
+    seed: int = 42,
+    db: Session = Depends(get_db),
+) -> StreamSimulationResponse:
+    safe_total = max(1, min(1000, total))
+    safe_batch_size = max(1, min(200, batch_size))
+    generated_batches = 0
+    transaction_ids: list[int] = []
+
+    remaining = safe_total
+    while remaining > 0:
+        current_batch_size = min(safe_batch_size, remaining)
+        generated = generate_seeded_transactions(scenario, current_batch_size, seed + generated_batches)
+        for tx, label in generated:
+            db.add(tx)
+            db.flush()
+            transaction_ids.append(tx.id)
+            if label:
+                db.add(TransactionLabel(transaction_id=tx.id, label=label, source="stream_simulation"))
+        remaining -= current_batch_size
+        generated_batches += 1
+        db.commit()
+
+    write_audit_log(
+        db,
+        actor_email="system@meridian.ai",
+        action="stream_simulation",
+        entity_type="simulation",
+        entity_id=scenario,
+        details={"scenario": scenario, "total": safe_total, "batch_size": safe_batch_size, "seed": seed},
+    )
+    db.commit()
+    return StreamSimulationResponse(
+        scenario=scenario,
+        total_generated=len(transaction_ids),
+        batches=generated_batches,
+        batch_size=safe_batch_size,
         transaction_ids=transaction_ids,
     )
 
