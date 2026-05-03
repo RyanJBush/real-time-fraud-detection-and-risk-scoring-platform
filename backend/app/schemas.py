@@ -165,6 +165,13 @@ class StreamSimulationResponse(BaseModel):
     transaction_ids: list[int]
 
 
+class DemoSimulationResponse(BaseModel):
+    total_transactions: int
+    total_scored: int
+    scenarios: dict[str, int]
+    example_case_ids: list[int]
+
+
 class ModelEvaluationItem(BaseModel):
     model_key: str
     model_version: str

@@ -63,6 +63,7 @@ from app.schemas import (
     SeedScenarioRequest,
     SeedScenarioResponse,
     StreamSimulationResponse,
+    DemoSimulationResponse,
     FeatureRefreshResponse,
     FeatureSnapshotOut,
     BackgroundJobListResponse,
@@ -884,6 +885,83 @@ def stream_simulation(
         batches=generated_batches,
         batch_size=safe_batch_size,
         transaction_ids=transaction_ids,
+    )
+
+
+@app.post(
+    "/api/simulations/run-demo",
+    response_model=DemoSimulationResponse,
+    dependencies=[Depends(require_roles("Admin", "Analyst"))],
+)
+def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSimulationResponse:
+    scenario_plan = {
+        "card_testing_burst": 35,
+        "high_value_geo_attack": 25,
+        "merchant_takeover": 20,
+        "stolen_card": 30,
+        "bot_activity": 30,
+        "account_takeover": 25,
+    }
+    transaction_ids: list[int] = []
+    for index, (scenario, count) in enumerate(scenario_plan.items()):
+        generated = generate_seeded_transactions(scenario, count, seed + index)
+        for tx, label in generated:
+            db.add(tx)
+            db.flush()
+            transaction_ids.append(tx.id)
+            if label:
+                db.add(TransactionLabel(transaction_id=tx.id, label=label, source="demo_simulation"))
+    db.commit()
+
+    scored_count = 0
+    for tx_id in transaction_ids:
+        tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
+        if not tx:
+            continue
+        features = extract_features(tx.amount, tx.country, tx.merchant)
+        model_score = score_transaction(features)
+        decision_ctx = evaluate_hybrid_decision(tx, model_score, db)
+        db.merge(
+            RiskScore(
+                transaction_id=tx.id,
+                model_score=model_score,
+                final_score=decision_ctx.combined_score,
+                decision=decision_ctx.decision,
+            )
+        )
+        db.merge(
+            DecisionTrace(
+                transaction_id=tx.id,
+                combined_score=decision_ctx.combined_score,
+                decision=decision_ctx.decision,
+                reason_codes=json.dumps(decision_ctx.reason_codes),
+                signal_details=json.dumps(decision_ctx.signal_details),
+                group_key=decision_ctx.group_key,
+                model_version=MODEL_VERSION,
+            )
+        )
+        tx.status = decision_ctx.decision
+        scored_count += 1
+    db.commit()
+
+    example_case_ids = [
+        case.transaction_id
+        for case in db.query(ReviewCase).order_by(ReviewCase.created_at.desc()).limit(8).all()
+    ]
+    write_audit_log(
+        db,
+        actor_email="system@meridian.ai",
+        action="run_demo_simulation",
+        entity_type="simulation",
+        entity_id="phase7_demo",
+        details={"seed": seed, "scenarios": scenario_plan, "total_transactions": len(transaction_ids)},
+    )
+    db.commit()
+    return DemoSimulationResponse(
+        total_transactions=len(transaction_ids),
+        total_scored=scored_count,
+        scenarios=scenario_plan,
+        example_case_ids=example_case_ids,
     )
 
 
