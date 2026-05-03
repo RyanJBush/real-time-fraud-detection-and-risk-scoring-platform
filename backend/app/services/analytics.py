@@ -44,7 +44,7 @@ def build_case_groups(db, *, status: str = "all", limit: int = 50) -> list[dict]
                 bucket["open_cases"] += 1
         bucket["total_transactions"] += 1
         bucket["max_risk_score"] = max(bucket["max_risk_score"], float(trace.combined_score))
-        bucket["review_required"] = bucket["review_required"] or trace.decision in {"review", "decline"}
+        bucket["review_required"] = bucket["review_required"] or trace.decision in {"review", "block", "decline"}
         bucket["countries"].add(tx.country.upper())
         bucket["merchants"].add(tx.merchant.lower())
 
@@ -87,7 +87,7 @@ def build_trend_summary(db) -> dict:
         if labels.get(score.transaction_id) in FRAUD_LABELS:
             daily_fraud[key] += 1
 
-        if score.decision in {"review", "decline"}:
+        if score.decision in {"review", "block", "decline"}:
             merchant_risk[tx.merchant.lower()] += 1
             country_risk[tx.country.upper()] += 1
 
