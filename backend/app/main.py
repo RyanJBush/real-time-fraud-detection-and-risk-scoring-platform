@@ -934,6 +934,7 @@ def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSi
         if existing_score:
             db.delete(existing_score)
         db.add(
+        db.merge(
             RiskScore(
                 transaction_id=tx.id,
                 model_score=model_score,
@@ -945,6 +946,7 @@ def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSi
         if existing_trace:
             db.delete(existing_trace)
         db.add(
+        db.merge(
             DecisionTrace(
                 transaction_id=tx.id,
                 combined_score=decision_ctx.combined_score,
