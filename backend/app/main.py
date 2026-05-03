@@ -158,6 +158,24 @@ def ready() -> dict[str, str]:
     return {"status": "ready"}
 
 
+def _decision_confidence(final_score: float) -> float:
+    """
+    Confidence proxy based on distance from decision boundaries.
+    Larger distance from boundaries => more confidence in categorical decision.
+    """
+    final_score = max(0.0, min(1.0, float(final_score)))
+    if final_score <= APPROVE_THRESHOLD_MAX:
+        boundary_distance = APPROVE_THRESHOLD_MAX - final_score
+    elif final_score <= REVIEW_THRESHOLD_MAX:
+        boundary_distance = min(
+            final_score - APPROVE_THRESHOLD_MAX,
+            REVIEW_THRESHOLD_MAX - final_score,
+        )
+    else:
+        boundary_distance = final_score - REVIEW_THRESHOLD_MAX
+    return round(max(0.05, min(0.99, 0.55 + boundary_distance)), 4)
+
+
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
     user = db.query(User).filter(User.email == payload.email).first()
@@ -346,6 +364,7 @@ def score(payload: ScoreRequest, db: Session = Depends(get_db)) -> ScoreOut:
         model_version=MODEL_VERSION,
         threshold_approve_max=APPROVE_THRESHOLD_MAX,
         threshold_review_max=REVIEW_THRESHOLD_MAX,
+        confidence_score=_decision_confidence(decision_ctx.combined_score),
     )
 
 
@@ -369,6 +388,7 @@ def get_score(
         model_version=trace.model_version if trace else MODEL_VERSION,
         threshold_approve_max=APPROVE_THRESHOLD_MAX,
         threshold_review_max=REVIEW_THRESHOLD_MAX,
+        confidence_score=_decision_confidence(row.final_score),
     )
 
 
@@ -397,6 +417,9 @@ def get_explanation(
         for key, value in sorted(shap_values.items(), key=lambda item: abs(item[1]), reverse=True)
     ]
     dominant_signal = max(signal_details, key=signal_details.get) if signal_details else ""
+    why_flagged = reason_codes[:5]
+    if not why_flagged:
+        why_flagged = top_factors[:3]
     return ExplanationOut(
         transaction_id=transaction_id,
         decision=decision,
@@ -415,6 +438,8 @@ def get_explanation(
         ),
         dominant_signal=dominant_signal,
         summary=build_explanation_summary(shap_values, top_factors, decision),
+        confidence_score=_decision_confidence(score_row.final_score if score_row else 0.5),
+        why_flagged=why_flagged,
     )
 
 
@@ -429,7 +454,7 @@ def metrics_summary(
     label_map = {label.transaction_id: label.label for label in labels}
     tx_by_id = {tx.id: tx for tx in db.query(Transaction).all()}
 
-    declined = sum(1 for s in scores if s.decision == "decline")
+    declined = sum(1 for s in scores if s.decision in {"decline", "block"})
     review = sum(1 for s in scores if s.decision == "review")
     approved = sum(1 for s in scores if s.decision == "approve")
     avg_score = (sum(s.final_score for s in scores) / len(scores)) if scores else 0.0
@@ -440,7 +465,7 @@ def metrics_summary(
     known_fraud = sum(1 for s in known_label_scores if label_map[s.transaction_id] in fraud_labels)
     fraud_rate = (known_fraud / len(known_label_scores)) if known_label_scores else 0.0
 
-    declined_with_label = [s for s in scores if s.decision == "decline" and s.transaction_id in label_map]
+    declined_with_label = [s for s in scores if s.decision in {"decline", "block"} and s.transaction_id in label_map]
     declined_non_fraud_count = sum(
         1 for s in declined_with_label if label_map[s.transaction_id] not in fraud_labels
     )
@@ -452,7 +477,7 @@ def metrics_summary(
         sum(
             tx_by_id[s.transaction_id].amount
             for s in scores
-            if s.decision == "decline"
+            if s.decision in {"decline", "block"}
             and s.transaction_id in label_map
             and label_map[s.transaction_id] in fraud_labels
             and s.transaction_id in tx_by_id
