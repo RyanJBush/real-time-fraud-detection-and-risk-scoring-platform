@@ -48,12 +48,13 @@ class ScoreOut(BaseModel):
     transaction_id: int
     model_score: float
     final_score: float
-    decision: Literal["approve", "review", "decline"]
+    decision: Literal["approve", "review", "block", "decline"]
     reason_codes: list[str] = Field(default_factory=list)
     signal_details: dict[str, float] = Field(default_factory=dict)
     model_version: str = "logreg_v2_hybrid"
     threshold_approve_max: float = 0.4
     threshold_review_max: float = 0.75
+    confidence_score: float = 0.0
 
 
 class ExplanationOut(BaseModel):
@@ -68,6 +69,8 @@ class ExplanationOut(BaseModel):
     narrative: str = ""
     dominant_signal: str = ""
     summary: str = ""
+    confidence_score: float = 0.0
+    why_flagged: list[str] = Field(default_factory=list)
 
 
 class MetricsSummary(BaseModel):
@@ -107,13 +110,22 @@ class ReviewQueueResponse(BaseModel):
 
 
 class ReviewDecisionRequest(BaseModel):
-    final_decision: Literal["approve", "review", "decline"]
+    final_decision: Literal["approve", "review", "block", "decline"]
     note: str = Field(min_length=3, max_length=5000)
 
 
 class ReviewAssignRequest(BaseModel):
     assigned_to: str = Field(min_length=3, max_length=255)
     note: str = Field(default="Assigned for manual review.", min_length=3, max_length=5000)
+
+
+class ReviewCommentRequest(BaseModel):
+    note: str = Field(min_length=3, max_length=5000)
+
+
+class MarkFraudRequest(BaseModel):
+    label: Literal["confirmed_fraud", "suspected_fraud", "chargeback"] = "confirmed_fraud"
+    note: str = Field(default="Marked as fraud by analyst.", min_length=3, max_length=5000)
 
 
 class ReviewEventOut(BaseModel):
@@ -126,7 +138,14 @@ class ReviewEventOut(BaseModel):
 
 
 class SeedScenarioRequest(BaseModel):
-    scenario: Literal["card_testing_burst", "high_value_geo_attack", "merchant_takeover"]
+    scenario: Literal[
+        "card_testing_burst",
+        "high_value_geo_attack",
+        "merchant_takeover",
+        "stolen_card",
+        "bot_activity",
+        "account_takeover",
+    ]
     count: int = Field(default=25, ge=1, le=500)
     seed: int = Field(default=42)
 
@@ -135,6 +154,14 @@ class SeedScenarioResponse(BaseModel):
     scenario: str
     count: int
     seed: int
+    transaction_ids: list[int]
+
+
+class StreamSimulationResponse(BaseModel):
+    scenario: str
+    total_generated: int
+    batches: int
+    batch_size: int
     transaction_ids: list[int]
 
 
@@ -226,12 +253,12 @@ class AuditLogResponse(BaseModel):
 class RuleCreateRequest(BaseModel):
     name: str = Field(min_length=3, max_length=255)
     condition: str = Field(min_length=3, max_length=2000)
-    action: Literal["approve", "review", "decline"]
+    action: Literal["approve", "review", "block", "decline"]
 
 
 class RuleUpdateRequest(BaseModel):
     condition: str | None = Field(default=None, min_length=3, max_length=2000)
-    action: Literal["approve", "review", "decline"] | None = None
+    action: Literal["approve", "review", "block", "decline"] | None = None
 
 
 class RuleOut(BaseModel):
