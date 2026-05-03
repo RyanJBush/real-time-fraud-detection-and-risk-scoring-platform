@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import DecisionTrace, ReviewCase, ReviewEvent, RiskScore, Transaction
 
-REVIEW_DECISIONS = {"approve", "review", "decline"}
+REVIEW_DECISIONS = {"approve", "review", "block", "decline"}
 
 
 def record_review_event(
@@ -39,7 +39,7 @@ def upsert_review_case(
     model_version: str,
     explanation_summary: str,
 ) -> ReviewCase | None:
-    if decision not in {"review", "decline"}:
+    if decision not in {"review", "block", "decline"}:
         return None
 
     review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction.id).first()

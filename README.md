@@ -72,6 +72,24 @@ High-level flow:
 5. Run seeded simulation in **Fraud Lab** and review model evaluation + case clusters.
 6. Return to **Dashboard** to show KPI/trend updates.
 
+### One-click demo realism bootstrap (Phase 7)
+Use this API to seed and score a realistic mixed dataset in one shot:
+
+```bash
+curl -X POST "http://localhost:8000/api/simulations/run-demo?seed=42" \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+This generates + scores scenarios for:
+- card testing burst
+- high value geo attack
+- merchant takeover
+- stolen card
+- bot activity
+- account takeover
+
+The response includes total generated/scored and example case IDs for quick UI walkthrough.
+
 ## Troubleshooting
 - **401 Unauthorized:** token expired/invalid → logout/login.
 - **No model metrics:** run seeded simulations first (Fraud Lab) to create labeled scored samples.

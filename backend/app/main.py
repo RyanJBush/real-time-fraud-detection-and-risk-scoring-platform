@@ -1,7 +1,9 @@
 import json
+from datetime import datetime
 import logging
 import time
 import uuid
+from typing import Literal
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi import Request, Response
@@ -50,7 +52,9 @@ from app.schemas import (
     RiskTrendPoint,
     ReviewDecisionRequest,
     ReviewAssignRequest,
+    ReviewCommentRequest,
     ReviewEventOut,
+    MarkFraudRequest,
     ReviewQueueItem,
     ReviewQueueResponse,
     RuleCreateRequest,
@@ -58,6 +62,8 @@ from app.schemas import (
     RuleUpdateRequest,
     SeedScenarioRequest,
     SeedScenarioResponse,
+    StreamSimulationResponse,
+    DemoSimulationResponse,
     FeatureRefreshResponse,
     FeatureSnapshotOut,
     BackgroundJobListResponse,
@@ -156,6 +162,24 @@ def health() -> dict[str, str]:
 @app.get("/ready")
 def ready() -> dict[str, str]:
     return {"status": "ready"}
+
+
+def _decision_confidence(final_score: float) -> float:
+    """
+    Confidence proxy based on distance from decision boundaries.
+    Larger distance from boundaries => more confidence in categorical decision.
+    """
+    final_score = max(0.0, min(1.0, float(final_score)))
+    if final_score <= APPROVE_THRESHOLD_MAX:
+        boundary_distance = APPROVE_THRESHOLD_MAX - final_score
+    elif final_score <= REVIEW_THRESHOLD_MAX:
+        boundary_distance = min(
+            final_score - APPROVE_THRESHOLD_MAX,
+            REVIEW_THRESHOLD_MAX - final_score,
+        )
+    else:
+        boundary_distance = final_score - REVIEW_THRESHOLD_MAX
+    return round(max(0.05, min(0.99, 0.55 + boundary_distance)), 4)
 
 
 @app.post("/api/auth/login", response_model=LoginResponse)
@@ -346,6 +370,7 @@ def score(payload: ScoreRequest, db: Session = Depends(get_db)) -> ScoreOut:
         model_version=MODEL_VERSION,
         threshold_approve_max=APPROVE_THRESHOLD_MAX,
         threshold_review_max=REVIEW_THRESHOLD_MAX,
+        confidence_score=_decision_confidence(decision_ctx.combined_score),
     )
 
 
@@ -369,6 +394,7 @@ def get_score(
         model_version=trace.model_version if trace else MODEL_VERSION,
         threshold_approve_max=APPROVE_THRESHOLD_MAX,
         threshold_review_max=REVIEW_THRESHOLD_MAX,
+        confidence_score=_decision_confidence(row.final_score),
     )
 
 
@@ -397,6 +423,9 @@ def get_explanation(
         for key, value in sorted(shap_values.items(), key=lambda item: abs(item[1]), reverse=True)
     ]
     dominant_signal = max(signal_details, key=signal_details.get) if signal_details else ""
+    why_flagged = reason_codes[:5]
+    if not why_flagged:
+        why_flagged = top_factors[:3]
     return ExplanationOut(
         transaction_id=transaction_id,
         decision=decision,
@@ -415,6 +444,8 @@ def get_explanation(
         ),
         dominant_signal=dominant_signal,
         summary=build_explanation_summary(shap_values, top_factors, decision),
+        confidence_score=_decision_confidence(score_row.final_score if score_row else 0.5),
+        why_flagged=why_flagged,
     )
 
 
@@ -429,7 +460,7 @@ def metrics_summary(
     label_map = {label.transaction_id: label.label for label in labels}
     tx_by_id = {tx.id: tx for tx in db.query(Transaction).all()}
 
-    declined = sum(1 for s in scores if s.decision == "decline")
+    declined = sum(1 for s in scores if s.decision in {"decline", "block"})
     review = sum(1 for s in scores if s.decision == "review")
     approved = sum(1 for s in scores if s.decision == "approve")
     avg_score = (sum(s.final_score for s in scores) / len(scores)) if scores else 0.0
@@ -440,7 +471,7 @@ def metrics_summary(
     known_fraud = sum(1 for s in known_label_scores if label_map[s.transaction_id] in fraud_labels)
     fraud_rate = (known_fraud / len(known_label_scores)) if known_label_scores else 0.0
 
-    declined_with_label = [s for s in scores if s.decision == "decline" and s.transaction_id in label_map]
+    declined_with_label = [s for s in scores if s.decision in {"decline", "block"} and s.transaction_id in label_map]
     declined_non_fraud_count = sum(
         1 for s in declined_with_label if label_map[s.transaction_id] not in fraud_labels
     )
@@ -452,7 +483,7 @@ def metrics_summary(
         sum(
             tx_by_id[s.transaction_id].amount
             for s in scores
-            if s.decision == "decline"
+            if s.decision in {"decline", "block"}
             and s.transaction_id in label_map
             and label_map[s.transaction_id] in fraud_labels
             and s.transaction_id in tx_by_id
@@ -619,6 +650,132 @@ def assign_case(
     )
 
 
+@app.post(
+    "/api/reviews/{transaction_id}/comment",
+    response_model=ReviewQueueItem,
+    dependencies=[Depends(require_roles("Admin", "Analyst", "Reviewer"))],
+)
+def comment_review_case(
+    transaction_id: int,
+    payload: ReviewCommentRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ReviewQueueItem:
+    review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction_id).first()
+    if not review_case:
+        raise HTTPException(status_code=404, detail="Review case not found")
+
+    review_case.analyst_notes = (
+        f"{review_case.analyst_notes}\n{payload.note}".strip() if review_case.analyst_notes else payload.note
+    )
+    review_case.updated_at = datetime.utcnow()
+    record_review_event(
+        db,
+        review_case_id=review_case.id,
+        actor_email=user.email,
+        action="commented",
+        note=payload.note,
+        details={"transaction_id": transaction_id},
+    )
+    write_audit_log(
+        db,
+        actor_email=user.email,
+        action="review_comment",
+        entity_type="review_case",
+        entity_id=str(review_case.id),
+        details={"transaction_id": transaction_id, "note": payload.note},
+    )
+    db.commit()
+    db.refresh(review_case)
+    return ReviewQueueItem(
+        case_id=review_case.id,
+        transaction_id=review_case.transaction_id,
+        status=review_case.status,
+        initial_decision=review_case.initial_decision,
+        final_decision=review_case.final_decision,
+        model_version=review_case.model_version,
+        reason_codes=json.loads(review_case.reason_codes),
+        explanation_summary=review_case.explanation_summary,
+        assigned_to=review_case.assigned_to,
+        analyst_notes=review_case.analyst_notes,
+        created_at=review_case.created_at,
+        updated_at=review_case.updated_at,
+        resolved_at=review_case.resolved_at,
+    )
+
+
+@app.post(
+    "/api/reviews/{transaction_id}/mark-fraud",
+    response_model=ReviewQueueItem,
+    dependencies=[Depends(require_roles("Admin", "Analyst", "Reviewer"))],
+)
+def mark_review_case_fraud(
+    transaction_id: int,
+    payload: MarkFraudRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ReviewQueueItem:
+    review_case = db.query(ReviewCase).filter(ReviewCase.transaction_id == transaction_id).first()
+    if not review_case:
+        raise HTTPException(status_code=404, detail="Review case not found")
+    existing_label = db.query(TransactionLabel).filter(TransactionLabel.transaction_id == transaction_id).first()
+    if existing_label:
+        existing_label.label = payload.label
+        existing_label.source = "analyst_review"
+    else:
+        db.add(TransactionLabel(transaction_id=transaction_id, label=payload.label, source="analyst_review"))
+
+    review_case.status = "resolved"
+    review_case.final_decision = "decline"
+    review_case.analyst_notes = (
+        f"{review_case.analyst_notes}\n{payload.note}".strip() if review_case.analyst_notes else payload.note
+    )
+    review_case.updated_at = datetime.utcnow()
+    review_case.resolved_at = datetime.utcnow()
+    tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if tx:
+        tx.status = "decline"
+    score_row = db.query(RiskScore).filter(RiskScore.transaction_id == transaction_id).first()
+    if score_row:
+        score_row.decision = "decline"
+    trace_row = db.query(DecisionTrace).filter(DecisionTrace.transaction_id == transaction_id).first()
+    if trace_row:
+        trace_row.decision = "decline"
+    record_review_event(
+        db,
+        review_case_id=review_case.id,
+        actor_email=user.email,
+        action="marked_fraud",
+        note=payload.note,
+        details={"label": payload.label},
+    )
+    write_audit_log(
+        db,
+        actor_email=user.email,
+        action="review_mark_fraud",
+        entity_type="review_case",
+        entity_id=str(review_case.id),
+        details={"transaction_id": transaction_id, "label": payload.label, "note": payload.note},
+    )
+    db.commit()
+    db.refresh(review_case)
+    return ReviewQueueItem(
+        case_id=review_case.id,
+        transaction_id=review_case.transaction_id,
+        status=review_case.status,
+        initial_decision=review_case.initial_decision,
+        final_decision=review_case.final_decision,
+        model_version=review_case.model_version,
+        reason_codes=json.loads(review_case.reason_codes),
+        explanation_summary=review_case.explanation_summary,
+        assigned_to=review_case.assigned_to,
+        analyst_notes=review_case.analyst_notes,
+        created_at=review_case.created_at,
+        updated_at=review_case.updated_at,
+        resolved_at=review_case.resolved_at,
+    )
+
+
 @app.get(
     "/api/reviews/{transaction_id}/history",
     response_model=list[ReviewEventOut],
@@ -681,6 +838,153 @@ def seed_scenarios(payload: SeedScenarioRequest, db: Session = Depends(get_db)) 
         count=len(transaction_ids),
         seed=payload.seed,
         transaction_ids=transaction_ids,
+    )
+
+
+@app.post(
+    "/api/simulations/stream",
+    response_model=StreamSimulationResponse,
+    dependencies=[Depends(require_roles("Admin", "Analyst"))],
+)
+def stream_simulation(
+    scenario: Literal[
+        "card_testing_burst",
+        "high_value_geo_attack",
+        "merchant_takeover",
+        "stolen_card",
+        "bot_activity",
+        "account_takeover",
+    ],
+    total: int = 100,
+    batch_size: int = 20,
+    seed: int = 42,
+    db: Session = Depends(get_db),
+) -> StreamSimulationResponse:
+    safe_total = max(1, min(1000, total))
+    safe_batch_size = max(1, min(200, batch_size))
+    generated_batches = 0
+    transaction_ids: list[int] = []
+
+    remaining = safe_total
+    while remaining > 0:
+        current_batch_size = min(safe_batch_size, remaining)
+        generated = generate_seeded_transactions(scenario, current_batch_size, seed + generated_batches)
+        for tx, label in generated:
+            db.add(tx)
+            db.flush()
+            transaction_ids.append(tx.id)
+            if label:
+                db.add(TransactionLabel(transaction_id=tx.id, label=label, source="stream_simulation"))
+        remaining -= current_batch_size
+        generated_batches += 1
+        db.commit()
+
+    write_audit_log(
+        db,
+        actor_email="system@meridian.ai",
+        action="stream_simulation",
+        entity_type="simulation",
+        entity_id=scenario,
+        details={"scenario": scenario, "total": safe_total, "batch_size": safe_batch_size, "seed": seed},
+    )
+    db.commit()
+    return StreamSimulationResponse(
+        scenario=scenario,
+        total_generated=len(transaction_ids),
+        batches=generated_batches,
+        batch_size=safe_batch_size,
+        transaction_ids=transaction_ids,
+    )
+
+
+@app.post(
+    "/api/simulations/run-demo",
+    response_model=DemoSimulationResponse,
+    dependencies=[Depends(require_roles("Admin", "Analyst"))],
+)
+def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSimulationResponse:
+    scenario_plan = {
+        "card_testing_burst": 35,
+        "high_value_geo_attack": 25,
+        "merchant_takeover": 20,
+        "stolen_card": 30,
+        "bot_activity": 30,
+        "account_takeover": 25,
+    }
+    transaction_ids: list[int] = []
+    for index, (scenario, count) in enumerate(scenario_plan.items()):
+        generated = generate_seeded_transactions(scenario, count, seed + index)
+        for tx, label in generated:
+            db.add(tx)
+            db.flush()
+            transaction_ids.append(tx.id)
+            if label:
+                db.add(TransactionLabel(transaction_id=tx.id, label=label, source="demo_simulation"))
+    db.commit()
+
+    scored_count = 0
+    for tx_id in transaction_ids:
+        tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
+        if not tx:
+            continue
+        features = extract_features(tx.amount, tx.country, tx.merchant)
+        model_score = score_transaction(features)
+        decision_ctx = evaluate_hybrid_decision(tx, model_score, db)
+        existing_score = db.query(RiskScore).filter(RiskScore.transaction_id == tx.id).first()
+        if existing_score:
+            db.delete(existing_score)
+        db.add(
+            RiskScore(
+                transaction_id=tx.id,
+                model_score=model_score,
+                final_score=decision_ctx.combined_score,
+                decision=decision_ctx.decision,
+            )
+        )
+        existing_trace = db.query(DecisionTrace).filter(DecisionTrace.transaction_id == tx.id).first()
+        if existing_trace:
+            db.delete(existing_trace)
+        db.add(
+            DecisionTrace(
+                transaction_id=tx.id,
+                combined_score=decision_ctx.combined_score,
+                decision=decision_ctx.decision,
+                reason_codes=json.dumps(decision_ctx.reason_codes),
+                signal_details=json.dumps(decision_ctx.signal_details),
+                group_key=decision_ctx.group_key,
+                model_version=MODEL_VERSION,
+            )
+        )
+        upsert_review_case(
+            db,
+            transaction=tx,
+            decision=decision_ctx.decision,
+            reason_codes=decision_ctx.reason_codes,
+            model_version=MODEL_VERSION,
+            explanation_summary=f"Demo simulation decision={decision_ctx.decision}, score={decision_ctx.combined_score:.3f}",
+        )
+        tx.status = decision_ctx.decision
+        scored_count += 1
+    db.commit()
+
+    example_case_ids = [
+        case.transaction_id
+        for case in db.query(ReviewCase).order_by(ReviewCase.created_at.desc()).limit(8).all()
+    ]
+    write_audit_log(
+        db,
+        actor_email="system@meridian.ai",
+        action="run_demo_simulation",
+        entity_type="simulation",
+        entity_id="phase7_demo",
+        details={"seed": seed, "scenarios": scenario_plan, "total_transactions": len(transaction_ids)},
+    )
+    db.commit()
+    return DemoSimulationResponse(
+        total_transactions=len(transaction_ids),
+        total_scored=scored_count,
+        scenarios=scenario_plan,
+        example_case_ids=example_case_ids,
     )
 
 
