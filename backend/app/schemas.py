@@ -54,6 +54,7 @@ class ScoreOut(BaseModel):
     model_version: str = "logreg_v2_hybrid"
     threshold_approve_max: float = 0.4
     threshold_review_max: float = 0.75
+    confidence_score: float = 0.0
 
 
 class ExplanationOut(BaseModel):
@@ -68,6 +69,8 @@ class ExplanationOut(BaseModel):
     narrative: str = ""
     dominant_signal: str = ""
     summary: str = ""
+    confidence_score: float = 0.0
+    why_flagged: list[str] = Field(default_factory=list)
 
 
 class MetricsSummary(BaseModel):
