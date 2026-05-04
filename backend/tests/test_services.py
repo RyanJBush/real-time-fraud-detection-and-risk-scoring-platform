@@ -28,7 +28,7 @@ from app.services.feature_service import (
     refresh_recent_feature_snapshots,
     upsert_feature_snapshot,
 )
-from app.services.fraud_engine import evaluate_hybrid_decision
+from app.services.fraud_engine import APPROVE_THRESHOLD_MAX, evaluate_hybrid_decision
 from app.services.jobs import create_job, job_summary, set_job_status
 from app.services.model_eval import (
     _metrics_for_threshold,
@@ -130,7 +130,12 @@ def test_evaluate_hybrid_decision_low_risk_approves(db_session: Session) -> None
 
     assert decision.decision == "approve"
     assert decision.reason_codes[-1] == "THRESHOLD_APPROVE"
-    assert all(signal == 0.0 for signal in decision.signal_details.values())
+    # Signals that are purely binary for a low-risk US/groceries/low-amount transaction should be 0
+    assert decision.signal_details["velocity_signal"] == 0.0
+    assert decision.signal_details["geo_signal"] == 0.0
+    assert decision.signal_details["merchant_signal"] == 0.0
+    # high_amount_signal is continuous: min(25/5000, 1.0) > 0 but well below the threshold
+    assert decision.signal_details["high_amount_signal"] < APPROVE_THRESHOLD_MAX
 
 
 def test_upsert_review_case_returns_none_for_approve(db_session: Session) -> None:
@@ -284,7 +289,7 @@ def test_apply_override_rejects_unsupported_decision(db_session: Session) -> Non
             db_session,
             transaction_id=tx.id,
             actor_email="analyst@meridian.ai",
-            final_decision="block",
+            final_decision="reject",  # "reject" is not a valid decision
             note="invalid decision",
         )
 

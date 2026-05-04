@@ -70,6 +70,8 @@ export function DashboardPage({ token }: DashboardPageProps) {
         <KpiCard label="Flagged Transactions" value={(summary.review + summary.declined).toLocaleString()} />
         <KpiCard label="Blocked Transactions" value={summary.declined.toLocaleString()} />
         <KpiCard label="Scored" value={summary.scored_transactions.toLocaleString()} />
+        <KpiCard label="Avg Risk Score" value={`${(summary.average_risk_score * 100).toFixed(1)}%`} />
+        <KpiCard label="Blocked Fraud Value" value={`$${summary.blocked_fraud_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
       </section>
 
       <article className="panel">

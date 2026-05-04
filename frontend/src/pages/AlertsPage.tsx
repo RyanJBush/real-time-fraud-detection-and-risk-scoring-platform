@@ -13,8 +13,6 @@ export function AlertsPage({ token }: AlertsPageProps) {
   const alerts = data
     .filter((row) => row.score && row.score.decision !== "approve")
     .sort((a, b) => (b.score?.final_score ?? 0) - (a.score?.final_score ?? 0));
-    .filter((row) => row.score.decision !== "approve")
-    .sort((a, b) => b.score.final_score - a.score.final_score);
 
   if (loading) return <p className="state">Loading fraud alerts...</p>;
   if (error) return <p className="state error">{error}</p>;
@@ -38,22 +36,6 @@ export function AlertsPage({ token }: AlertsPageProps) {
               score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
             ) : (
               <span>pending_score</span>
-          <div className="flags">
-            {score?.reason_codes.length ? (
-              score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
-            ) : (
-              <span>pending_score</span>
-          <div className="flags">
-            {score?.reason_codes.length ? (
-              score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
-            ) : (
-              <span>pending_score</span>
-          <RiskGauge score={score.final_score} />
-          <div className="flags">
-            {score.reason_codes.length ? (
-              score.reason_codes.map((reason) => <span key={reason}>{reason}</span>)
-            ) : (
-              <span>model_only</span>
             )}
           </div>
           <Link to={`/transactions/${transaction.id}`} className="detail-link">
