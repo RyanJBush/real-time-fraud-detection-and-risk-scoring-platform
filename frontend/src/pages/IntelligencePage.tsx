@@ -4,6 +4,7 @@ import {
   fetchCaseGroups,
   fetchCaseSummary,
   fetchModelEvaluation,
+  runDemoSimulation,
   scoreTransaction,
   seedScenario,
 } from "../services/api";
@@ -13,13 +14,29 @@ interface IntelligencePageProps {
   token: string;
 }
 
-type ScenarioKey = "card_testing_burst" | "high_value_geo_attack" | "merchant_takeover";
+type ScenarioKey =
+  | "card_testing_burst"
+  | "high_value_geo_attack"
+  | "merchant_takeover"
+  | "stolen_card"
+  | "bot_activity"
+  | "account_takeover";
+
+const SCENARIO_LABELS: Record<ScenarioKey, string> = {
+  card_testing_burst: "Card Testing Burst",
+  high_value_geo_attack: "High-Value Geo Attack",
+  merchant_takeover: "Merchant Takeover",
+  stolen_card: "Stolen Card",
+  bot_activity: "Bot Activity",
+  account_takeover: "Account Takeover",
+};
 
 export function IntelligencePage({ token }: IntelligencePageProps) {
   const [scenario, setScenario] = useState<ScenarioKey>("high_value_geo_attack");
   const [count, setCount] = useState(25);
   const [seed, setSeed] = useState(42);
   const [running, setRunning] = useState(false);
+  const [demoRunning, setDemoRunning] = useState(false);
   const [simMessage, setSimMessage] = useState<string | null>(null);
 
   const [models, setModels] = useState<ModelEvaluationItem[]>([]);
@@ -56,13 +73,29 @@ export function IntelligencePage({ token }: IntelligencePageProps) {
       const result = await seedScenario(token, scenario, count, seed);
       await Promise.all(result.transaction_ids.map((txId) => scoreTransaction(token, txId)));
       setSimMessage(
-        `Seeded and scored ${result.count} transactions for ${result.scenario} (seed=${result.seed}).`
+        `✓ Seeded and scored ${result.count} transactions for "${SCENARIO_LABELS[result.scenario as ScenarioKey]}" (seed=${result.seed}).`
       );
       await loadIntel();
     } catch (err) {
       setSimMessage(err instanceof Error ? err.message : "Simulation run failed");
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function runDemo() {
+    try {
+      setDemoRunning(true);
+      setSimMessage(null);
+      const result = await runDemoSimulation(token, seed);
+      setSimMessage(
+        `✓ Demo complete: ${result.total_transactions} transactions across ${Object.keys(result.scenarios).length} scenarios, ${result.total_scored} scored.`
+      );
+      await loadIntel();
+    } catch (err) {
+      setSimMessage(err instanceof Error ? err.message : "Demo simulation failed");
+    } finally {
+      setDemoRunning(false);
     }
   }
 
@@ -85,9 +118,9 @@ export function IntelligencePage({ token }: IntelligencePageProps) {
         <p className="muted">Generate realistic fraud patterns, score them, and refresh performance analytics.</p>
         <div className="create-form">
           <select value={scenario} onChange={(event) => setScenario(event.target.value as ScenarioKey)}>
-            <option value="card_testing_burst">Card testing burst</option>
-            <option value="high_value_geo_attack">High value geo attack</option>
-            <option value="merchant_takeover">Merchant takeover</option>
+            {(Object.keys(SCENARIO_LABELS) as ScenarioKey[]).map((key) => (
+              <option key={key} value={key}>{SCENARIO_LABELS[key]}</option>
+            ))}
           </select>
           <input
             type="number"
@@ -95,14 +128,21 @@ export function IntelligencePage({ token }: IntelligencePageProps) {
             max={500}
             value={count}
             onChange={(event) => setCount(Number(event.target.value))}
+            placeholder="Count"
           />
           <input
             type="number"
             value={seed}
             onChange={(event) => setSeed(Number(event.target.value))}
+            placeholder="Seed"
           />
-          <button onClick={runScenario} disabled={running}>
-            {running ? "Running..." : "Run simulation"}
+          <button onClick={runScenario} disabled={running || demoRunning}>
+            {running ? "Running..." : "Run Scenario"}
+          </button>
+        </div>
+        <div style={{ marginTop: "0.75rem" }}>
+          <button onClick={runDemo} disabled={running || demoRunning} className="inline-btn">
+            {demoRunning ? "Running full demo..." : "▶ Run Full Demo (all scenarios)"}
           </button>
         </div>
         {simMessage ? <p className="state">{simMessage}</p> : null}

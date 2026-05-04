@@ -194,3 +194,10 @@ export interface CaseSummary {
   group_key: string;
   summary: string;
 }
+
+export interface DemoSimulationResponse {
+  total_transactions: number;
+  total_scored: number;
+  scenarios: Record<string, number>;
+  example_case_ids: number[];
+}

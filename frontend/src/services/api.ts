@@ -1,6 +1,7 @@
 import type {
   CaseGroupsResponse,
   CaseSummary,
+  DemoSimulationResponse,
   Explanation,
   LoginResponse,
   MetricsSummary,
@@ -64,6 +65,7 @@ export async function fetchReviewSuggestion(token: string, transactionId: number
 export async function commentReviewCase(token: string, transactionId: number, note: string): Promise<void> { await handleResponse(await fetch(`${API_BASE}/reviews/${transactionId}/comment`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders(token) }, body: JSON.stringify({ note }) })); }
 export async function markReviewFraud(token: string, transactionId: number, label: "confirmed_fraud" | "suspected_fraud" | "chargeback", note: string): Promise<void> { await handleResponse(await fetch(`${API_BASE}/reviews/${transactionId}/mark-fraud`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders(token) }, body: JSON.stringify({ label, note }) })); }
 export async function seedScenario(token: string, scenario: "card_testing_burst" | "high_value_geo_attack" | "merchant_takeover" | "stolen_card" | "bot_activity" | "account_takeover", count: number, seed: number): Promise<SeedScenarioResponse> { return handleResponse<SeedScenarioResponse>(await fetch(`${API_BASE}/simulations/seed-scenarios`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders(token) }, body: JSON.stringify({ scenario, count, seed }) })); }
+export async function runDemoSimulation(token: string, seed = 42): Promise<DemoSimulationResponse> { return handleResponse<DemoSimulationResponse>(await fetch(`${API_BASE}/simulations/run-demo?seed=${seed}`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders(token) } })); }
 export async function fetchModelEvaluation(token: string): Promise<ModelEvaluationResponse> { return handleResponse<ModelEvaluationResponse>(await fetch(`${API_BASE}/models/evaluation`, { headers: { ...authHeaders(token) } })); }
 export async function fetchCaseGroups(token: string, status = "all"): Promise<CaseGroupsResponse> { return handleResponse<CaseGroupsResponse>(await fetch(`${API_BASE}/cases/groups?status=${status}&limit=25`, { headers: { ...authHeaders(token) } })); }
 export async function fetchCaseSummary(token: string, groupKey: string): Promise<CaseSummary> { return handleResponse<CaseSummary>(await fetch(`${API_BASE}/cases/summary?group_key=${encodeURIComponent(groupKey)}`, { headers: { ...authHeaders(token) } })); }
