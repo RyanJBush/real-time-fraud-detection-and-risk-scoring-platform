@@ -24,6 +24,55 @@ Fraud detection is one of the highest-stakes ML applications — false negatives
 
 ---
 
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client["Client Layer"]
+        UI["React + TypeScript\nAnalyst Console"]
+    end
+
+    subgraph API["FastAPI Backend (app/routers/)"]
+        direction TB
+        R_AUTH["auth.py\n/api/auth"]
+        R_TXN["transactions.py\n/api/transactions"]
+        R_SCORE["scores.py\n/api/scores"]
+        R_EXPLAIN["explanations.py\n/api/explanations"]
+        R_REVIEW["reviews.py\n/api/reviews"]
+        R_SIM["simulations.py\n/api/simulations"]
+        R_METRICS["metrics.py\n/api/metrics"]
+        R_AUDIT["audit.py\n/api/audit"]
+        R_JOBS["jobs.py\n/api/jobs"]
+        R_CASES["cases.py\n/api/cases"]
+    end
+
+    subgraph ML["Scoring Engine (app/ml.py)"]
+        RULES["Rule Engine\n(high_amount, risky_country)"]
+        MODEL["scikit-learn\nGradientBoostingClassifier"]
+        SHAP["SHAP\nFeature Attribution"]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[("PostgreSQL\nTransactions · Cases · Audit")]
+    end
+
+    UI -->|"REST / JWT"| R_AUTH
+    UI --> R_TXN
+    UI --> R_SCORE
+    UI --> R_REVIEW
+    UI --> R_SIM
+    UI --> R_METRICS
+
+    R_SCORE --> RULES
+    R_SCORE --> MODEL
+    R_EXPLAIN --> SHAP
+    SHAP --> MODEL
+
+    R_TXN & R_SCORE & R_REVIEW & R_AUDIT & R_CASES & R_JOBS --> PG
+```
+
+---
+
 ## 📷 Features
 
 - **Transaction ingestion** — submit transactions and receive real-time ML risk scores
