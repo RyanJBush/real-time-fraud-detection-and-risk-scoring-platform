@@ -1,5 +1,3 @@
-# 🔍 Real-Time Fraud Detection Platform
-
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
@@ -7,8 +5,11 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 ![SHAP](https://img.shields.io/badge/SHAP-Explainability-blueviolet?style=flat)
+![CI](https://github.com/RyanJBush/Real-time-fraud-detection-platform/actions/workflows/ci.yml/badge.svg)
 
-A production-style, full-stack fraud detection system combining a hybrid rules + ML risk scoring engine with SHAP explainability, an analyst review workflow, and a real-time analytics dashboard.
+# 🔍 Real-Time Fraud Detection Platform
+
+> A production-style fraud detection system combining a hybrid rules + ML risk scoring engine with SHAP explainability, an analyst review workflow, and a real-time analytics dashboard.
 
 ---
 
@@ -16,10 +17,10 @@ A production-style, full-stack fraud detection system combining a hybrid rules +
 
 Fraud detection is one of the highest-stakes ML applications — false negatives cost money, false positives erode customer trust. I built this platform to practice the complete lifecycle: from data ingestion and risk scoring to analyst review workflows and model evaluation. Key design decisions:
 
-- **Hybrid rules + ML engine** — rule-based checks catch known fraud patterns instantly, while the ML model handles novel, complex cases. Combining both reduces both false positive and false negative rates.
-- **SHAP explainability** — every risk score is backed by a per-feature contribution breakdown, making decisions auditable and analyst-friendly
-- **Seeded simulation scenarios** — realistic fraud patterns (card testing bursts, geo attacks, bot activity, account takeover) for convincing, reproducible demos
-- **Role-based access** — Admin, Analyst, Reviewer, and Viewer roles with distinct UI access patterns
+- **Hybrid rules + ML engine** — rule-based checks catch known fraud patterns instantly, while the ML model handles novel, complex cases. Combining both reduces false positive and false negative rates compared to either approach alone
+- **SHAP explainability** — every risk score is backed by a per-feature contribution breakdown, making decisions auditable and analyst-friendly in a regulated context
+- **Seeded simulation scenarios** — realistic fraud patterns (card testing bursts, geo attacks, bot activity, account takeover) for convincing, reproducible demos without needing real transaction data
+- **Role-based access** — Admin, Analyst, Reviewer, and Viewer roles with distinct UI access patterns reflecting real fraud operations team structures
 
 ---
 
@@ -48,10 +49,15 @@ Fraud detection is one of the highest-stakes ML applications — false negatives
 
 ## 🚀 Quick Start
 
+### Prerequisites
+- Docker + Docker Compose
+- Python 3.11+
+- Node.js 20+
+
 ### Docker (Recommended)
 ```bash
 docker compose up --build
-# Frontend: http://localhost:5173
+# Frontend:         http://localhost:5173
 # Backend API docs: http://localhost:8000/docs
 ```
 
@@ -71,7 +77,8 @@ cd frontend && npm ci && npm run dev
 curl -X POST "http://localhost:8000/api/simulations/run-demo?seed=42" \
   -H "Authorization: Bearer <TOKEN>"
 ```
-Generates and scores card testing, high-value geo attack, merchant takeover, stolen card, bot activity, and account takeover scenarios.
+
+Generates and scores: card testing, high-value geo attack, merchant takeover, stolen card, bot activity, and account takeover scenarios.
 
 ### Quality Checks
 ```bash
@@ -105,8 +112,8 @@ All passwords: `password123`
 
 ## 📝 Key Learnings
 
-- Hybrid rule+ML systems outperform either approach alone — rules handle high-confidence known patterns, ML catches the long tail
-- SHAP values transform a black-box model into an auditable decision system, which is essential for regulated industries
+- Hybrid rule+ML systems outperform either approach alone — rules handle high-confidence known patterns, ML catches the long tail of novel fraud variants
+- SHAP values transform a black-box model into an auditable decision system, which is essential for regulated industries where every denial must be explainable
 - Realistic simulation scenarios are critical for meaningful model evaluation; synthetic but plausible data exposes edge cases that clean datasets hide
 
 ---
