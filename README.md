@@ -7,7 +7,11 @@
 ![SHAP](https://img.shields.io/badge/SHAP-Explainability-blueviolet?style=flat)
 ![CI](https://github.com/RyanJBush/Real-time-fraud-detection-platform/actions/workflows/ci.yml/badge.svg)
 
-# 🔍 Real-Time Fraud Detection Platform
+# Meridian
+
+**Real-Time Fraud Detection & Risk Analytics Platform**
+
+[**🔗 View Live Preview →**](https://www.perplexity.ai/computer/a/meridian-preview-project-9-of-lCA5DWRgQoa4AN6VYPXAUQ)
 
 > A production-style fraud detection system combining a hybrid rules + ML risk scoring engine with SHAP explainability, an analyst review workflow, and a real-time analytics dashboard.
 
