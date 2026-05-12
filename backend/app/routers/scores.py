@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.ml import (
     MODEL_VERSION,
-    build_explanation_narrative,
     build_explanation_summary,
     extract_features,
     score_transaction,
@@ -16,7 +15,6 @@ from app.ml import (
 from app.models import (
     DecisionTrace,
     Explanation,
-    ReviewCase,
     RiskScore,
     Transaction,
     User,
