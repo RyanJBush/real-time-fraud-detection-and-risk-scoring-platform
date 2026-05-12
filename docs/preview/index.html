@@ -53,7 +53,7 @@
   <main class="wrap">
     <section class="hero">
       <h1>Meridian</h1>
-      <p class="tagline">Portfolio Preview: demo-scale fraud detection workflow from transaction intake to analyst decision support.</p>
+      <p class="tagline">Design Preview: portfolio-scale fraud detection demo built with synthetic transaction workflows for ML scoring and analyst review.</p>
       <div class="disclaimer">Uses synthetic transaction data — not real banking data.</div>
     </section>
 
@@ -68,10 +68,10 @@
     </section>
 
     <section class="section">
-      <h2>Key Detection Capabilities</h2>
+      <h2>How Detection Works</h2>
       <div class="cards">
-        <article class="card"><strong>Hybrid scoring</strong><p>Combines configurable risk rules with model probability output for triage decisions.</p></article>
-        <article class="card"><strong>Analyst review queue</strong><p>Routes flagged transactions into assignment and decision workflows with audit context.</p></article>
+        <article class="card"><strong>Hybrid scoring</strong><p>Combines rule signals with logistic regression probability to produce a fraud-risk score and decision band.</p></article>
+        <article class="card"><strong>Analyst review queue</strong><p>Routes higher-risk synthetic transactions into a review queue so an analyst can approve, challenge, or decline.</p></article>
         <article class="card"><strong>Explainability</strong><p>Surfaces SHAP-based feature contributions for transaction-level review.</p></article>
       </div>
     </section>
@@ -86,8 +86,8 @@
     </section>
 
     <section class="section">
-      <h2>Performance Snapshot</h2>
-      <div class="metric">See demo workflow and model-evaluation screenshots in repository docs for synthetic-data evaluation context.</div>
+      <h2>Pipeline Notes</h2>
+      <div class="metric">Feature examples include amount level, merchant risk category, and country risk indicators extracted before scoring.</div>
     </section>
 
     <section class="section">
