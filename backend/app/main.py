@@ -16,7 +16,19 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine
 from app.models import Rule, User
-from app.routers import auth, audit, cases, explanations, jobs, metrics, reviews, scores, simulations, transactions
+from app.routers import (
+    audit,
+    auth,
+    cases,
+    explanations,
+    jobs,
+    metrics,
+    reviews,
+    rules,
+    scores,
+    simulations,
+    transactions,
+)
 from app.security import get_password_hash
 
 app = FastAPI(title="Meridian AI API", version="0.2.0")
@@ -78,6 +90,7 @@ for _router in (
     audit.router,
     jobs.router,
     cases.router,
+    rules.router,
 ):
     app.include_router(_router)
 

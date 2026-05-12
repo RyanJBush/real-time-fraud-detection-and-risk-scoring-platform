@@ -233,4 +233,4 @@ def review_suggestion(transaction_id: int, db: Session = Depends(get_db)) -> Rev
         raise HTTPException(status_code=404, detail="Score not found")
     trace = db.query(DecisionTrace).filter(DecisionTrace.transaction_id == transaction_id).first()
     suggestion = generate_review_suggestion(score, trace)
-    return ReviewSuggestionOut(transaction_id=transaction_id, **suggestion)
+    return ReviewSuggestionOut.model_validate({"transaction_id": transaction_id, **suggestion})

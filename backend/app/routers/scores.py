@@ -1,4 +1,5 @@
 import json
+from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -129,7 +130,7 @@ def score(payload: ScoreRequest, db: Session = Depends(get_db)) -> ScoreOut:
         transaction_id=tx.id,
         model_score=model_score,
         final_score=decision_ctx.combined_score,
-        decision=decision_ctx.decision,
+        decision=cast(Literal["approve", "review", "block", "decline"], decision_ctx.decision),
         reason_codes=decision_ctx.reason_codes,
         signal_details=decision_ctx.signal_details,
         model_version=MODEL_VERSION,
@@ -153,7 +154,7 @@ def get_score(
         transaction_id=row.transaction_id,
         model_score=row.model_score,
         final_score=row.final_score,
-        decision=row.decision,
+        decision=cast(Literal["approve", "review", "block", "decline"], row.decision),
         reason_codes=json.loads(trace.reason_codes) if trace else [],
         signal_details=json.loads(trace.signal_details) if trace else {},
         model_version=trace.model_version if trace else MODEL_VERSION,

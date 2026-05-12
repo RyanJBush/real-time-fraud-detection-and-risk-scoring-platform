@@ -8,7 +8,7 @@ from app.models import DecisionTrace, RiskScore, Transaction
 def generate_review_suggestion(score: RiskScore, trace: DecisionTrace | None) -> dict[str, str | float]:
     reason_codes = json.loads(trace.reason_codes) if trace and trace.reason_codes else []
     signal_details = json.loads(trace.signal_details) if trace and trace.signal_details else {}
-    dominant_signal = max(signal_details, key=signal_details.get) if signal_details else "model_score"
+    dominant_signal = max(signal_details, key=lambda k: signal_details[k]) if signal_details else "model_score"
 
     if score.final_score >= 0.82:
         decision = "decline"

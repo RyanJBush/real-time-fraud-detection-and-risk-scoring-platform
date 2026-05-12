@@ -5,14 +5,16 @@ from sqlalchemy.orm import Session
 
 from app.db import engine, get_db
 from app.models import BackgroundJob, FeatureSnapshot, Transaction
+from app.models import User
 from app.schemas import (
     BackgroundJobListResponse,
     BackgroundJobOut,
     FeatureRefreshResponse,
     FeatureSnapshotOut,
+    JobRetryResponse,
     JobSummaryResponse,
 )
-from app.security import require_roles
+from app.security import get_current_user, require_roles
 from app.services.audit import write_audit_log
 from app.services.feature_service import refresh_recent_feature_snapshots, upsert_feature_snapshot
 from app.services.jobs import create_job, job_summary, set_job_status
@@ -120,3 +122,63 @@ def list_jobs(
 )
 def get_job_summary(db: Session = Depends(get_db)) -> JobSummaryResponse:
     return JobSummaryResponse(**job_summary(db))
+
+
+def _job_to_out(row: BackgroundJob) -> BackgroundJobOut:
+    return BackgroundJobOut(
+        id=row.id,
+        job_type=row.job_type,
+        status=row.status,
+        attempts=row.attempts,
+        parent_job_id=row.parent_job_id,
+        metadata=json.loads(row.metadata_json),
+        result=json.loads(row.result_json),
+        error_message=row.error_message,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+@router.get(
+    "/jobs/{job_id}",
+    response_model=BackgroundJobOut,
+    dependencies=[Depends(require_roles("Admin", "Analyst"))],
+)
+def get_job(job_id: int, db: Session = Depends(get_db)) -> BackgroundJobOut:
+    row = db.query(BackgroundJob).filter(BackgroundJob.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return _job_to_out(row)
+
+
+@router.post("/jobs/{job_id}/retry", response_model=JobRetryResponse)
+def retry_job(
+    job_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JobRetryResponse:
+    if user.role not in {"Admin", "Analyst"}:
+        raise HTTPException(status_code=403, detail="Insufficient role")
+    row = db.query(BackgroundJob).filter(BackgroundJob.id == job_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if row.job_type != "feature_refresh":
+        raise HTTPException(status_code=400, detail="Only feature_refresh jobs are retryable")
+    metadata = json.loads(row.metadata_json or "{}")
+    new_job = create_job(
+        db,
+        job_type="feature_refresh",
+        metadata=metadata,
+        parent_job_id=row.id,
+        attempts=row.attempts + 1,
+    )
+    write_audit_log(
+        db,
+        actor_email=user.email,
+        action="job_retry",
+        entity_type="background_job",
+        entity_id=str(row.id),
+        details={"new_job_id": new_job.id, "job_type": row.job_type},
+    )
+    db.commit()
+    return JobRetryResponse(retried_from_job_id=row.id, new_job_id=new_job.id, status=new_job.status)
