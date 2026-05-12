@@ -110,9 +110,10 @@ def run_demo_simulation(seed: int = 42, db: Session = Depends(get_db)) -> DemoSi
     db.commit()
     scored_count = 0
     for tx_id in transaction_ids:
-        tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
-        if not tx:
+        tx_row: Transaction | None = db.query(Transaction).filter(Transaction.id == tx_id).first()
+        if tx_row is None:
             continue
+        tx = tx_row
         features = extract_features(tx.amount, tx.country, tx.merchant)
         model_score = score_transaction(features)
         decision_ctx = evaluate_hybrid_decision(tx, model_score, db)

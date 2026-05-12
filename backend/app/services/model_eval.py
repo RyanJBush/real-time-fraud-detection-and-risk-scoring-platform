@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -61,8 +62,8 @@ def build_labeled_dataset(db) -> tuple[np.ndarray, np.ndarray]:
     return np.array(x_rows, dtype=float), np.array(y_rows, dtype=int)
 
 
-def _available_models() -> list[tuple[str, str, object, str]]:
-    models: list[tuple[str, str, object, str]] = [
+def _available_models() -> list[tuple[str, str, Any, str]]:
+    models: list[tuple[str, str, Any, str]] = [
         (
             "logistic_regression",
             "logreg_balanced_v3",

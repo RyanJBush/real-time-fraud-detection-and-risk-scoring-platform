@@ -27,6 +27,7 @@ def generate_seeded_transactions(scenario: str, count: int, seed: int) -> list[t
     generated: list[tuple[Transaction, str | None]] = []
 
     for idx in range(count):
+        label: str | None
         if scenario == "card_testing_burst":
             tx = Transaction(
                 amount=round(rng.uniform(5, 50), 2),
