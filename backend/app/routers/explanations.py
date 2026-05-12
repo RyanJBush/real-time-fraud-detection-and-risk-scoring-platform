@@ -51,7 +51,7 @@ def get_explanation(
         }
         for key, value in sorted(shap_values.items(), key=lambda item: abs(item[1]), reverse=True)
     ]
-    dominant_signal = max(signal_details, key=signal_details.get) if signal_details else ""
+    dominant_signal = max(signal_details, key=lambda k: signal_details[k]) if signal_details else ""
     why_flagged = reason_codes[:5] or top_factors[:3]
     return ExplanationOut(
         transaction_id=transaction_id,
