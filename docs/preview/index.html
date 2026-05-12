@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meridian | Portfolio Preview</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #111827;
+      --panel-2: #182233;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #f59e0b;
+      --accent-2: #fb923c;
+      --border: #243244;
+      --ok: #34d399;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 56px; }
+    .hero { background: linear-gradient(135deg, #101827 0%, #1b2536 100%); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.6rem, 4vw, 2.4rem); }
+    .tagline { margin: 0; color: var(--muted); font-size: 1rem; }
+    .disclaimer { margin-top: 16px; display: inline-block; background: rgba(245,158,11,0.12); border: 1px solid var(--accent); color: #fde68a; padding: 10px 12px; border-radius: 10px; font-weight: 600; }
+    .section { margin-top: 24px; }
+    .section h2 { margin: 0 0 12px; font-size: 1.2rem; }
+    .pipeline { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .step { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; position: relative; min-height: 90px; }
+    .step:not(:last-child)::after { content: "→"; position: absolute; right: -10px; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: 700; }
+    .k { color: var(--accent-2); font-weight: 700; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+    .v { margin-top: 6px; font-weight: 600; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge { border: 1px solid var(--border); background: var(--panel-2); color: #d1d5db; padding: 6px 10px; border-radius: 999px; font-size: .85rem; }
+    a { color: #fbbf24; text-decoration: none; }
+    .metric { background: var(--panel); border: 1px dashed var(--border); border-radius: 12px; padding: 14px; color: var(--muted); }
+    footer { margin-top: 28px; color: var(--muted); font-size: .9rem; }
+    @media (max-width: 840px) {
+      .pipeline { grid-template-columns: 1fr 1fr; }
+      .step:nth-child(2)::after { content: ""; }
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .pipeline, .cards { grid-template-columns: 1fr; }
+      .step::after { content: "" !important; }
+      .hero { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Meridian</h1>
+      <p class="tagline">Portfolio Preview: demo-scale fraud detection workflow from transaction intake to analyst decision support.</p>
+      <div class="disclaimer">Uses synthetic transaction data — not real banking data.</div>
+    </section>
+
+    <section class="section">
+      <h2>ML Pipeline Overview</h2>
+      <div class="pipeline" aria-label="ML pipeline steps">
+        <article class="step"><div class="k">Step 1</div><div class="v">Synthetic Transaction Data</div></article>
+        <article class="step"><div class="k">Step 2</div><div class="v">Feature Engineering</div></article>
+        <article class="step"><div class="k">Step 3</div><div class="v">Rules + Logistic Model</div></article>
+        <article class="step"><div class="k">Step 4</div><div class="v">Fraud Score + Decision Band</div></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Key Detection Capabilities</h2>
+      <div class="cards">
+        <article class="card"><strong>Hybrid scoring</strong><p>Combines configurable risk rules with model probability output for triage decisions.</p></article>
+        <article class="card"><strong>Analyst review queue</strong><p>Routes flagged transactions into assignment and decision workflows with audit context.</p></article>
+        <article class="card"><strong>Explainability</strong><p>Surfaces SHAP-based feature contributions for transaction-level review.</p></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Tech Stack</h2>
+      <div class="badge-row">
+        <span class="badge">Python</span><span class="badge">FastAPI</span><span class="badge">PostgreSQL</span>
+        <span class="badge">React</span><span class="badge">TypeScript</span><span class="badge">Docker</span>
+        <span class="badge">scikit-learn</span><span class="badge">SHAP</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Performance Snapshot</h2>
+      <div class="metric">See demo workflow and model-evaluation screenshots in repository docs for synthetic-data evaluation context.</div>
+    </section>
+
+    <section class="section">
+      <h2>Repository</h2>
+      <p><a href="https://github.com/RyanJBush/Real-time-fraud-detection-platform" target="_blank" rel="noreferrer">View Meridian on GitHub</a></p>
+    </section>
+
+    <footer>
+      Built for portfolio review • <a href="https://github.com/RyanJBush" target="_blank" rel="noreferrer">RyanJBush GitHub Profile</a>
+    </footer>
+  </main>
+</body>
+</html>
