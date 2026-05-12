@@ -1,47 +1,31 @@
 # Screenshot Documentation — Meridian
 
-This folder stores screenshots for README, architecture walkthroughs, and demo storytelling.
+This directory contains screenshots captured from local demo runs.
 
-## Accuracy and privacy rules
+> **Data disclaimer:** Uses synthetic transaction data — not real banking data.
 
-- Capture only from local/demo runs seeded with synthetic/sample transactions.
-- Never include real banking data, real customer data, or production environment artifacts.
-- Ensure screenshots do not imply live fraud-prevention operations.
+## Current screenshot inventory
 
-## Required screenshot set
+The following files currently exist in this folder:
 
-| File | Purpose |
-|---|---|
-| `login-page.png` | Demonstrate role-based entry experience |
-| `dashboard-kpis.png` | Show KPI summary and trend context |
-| `review-queue.png` | Show analyst triage queue |
-| `transaction-detail.png` | Show risk score + decision trace |
-| `shap-explanation.png` | Show explainability factors for one score |
-| `model-evaluation.png` | Show synthetic model evaluation metrics |
-| `swagger-docs.png` | Show documented API surface in Swagger |
+- `login-page.png` — Login screen for local portfolio demo access
+- `dashboard-kpis.png` — KPI dashboard after demo simulation seed
+- `review-queue.png` — Analyst queue for pending and resolved reviews
+- `transaction-detail.png` — Transaction detail with score context and reason trace
+- `shap-explanation.png` — SHAP contribution visualization from explanation endpoint
+- `model-evaluation.png` — Offline evaluation view based on synthetic labels
+- `swagger-docs.png` — Backend API reference in Swagger UI
 
-## Capture standard
+## Capture checklist for future refreshes
 
-- Resolution target: ~`1280x800`
-- Format: PNG
-- Keep image size optimized (<500 KB where practical)
-- Use consistent theme/zoom for recruiter readability
+- [ ] Re-capture screenshots after major UI layout changes
+- [ ] Verify seeded synthetic data is loaded before capturing
+- [ ] Confirm no real customer or banking data appears in any image
+- [ ] Keep consistent viewport and zoom for recruiter readability
 
-## Suggested capture flow
+## Suggested capture workflow
 
 1. Run `docker compose up --build`.
-2. Log in with seeded demo account.
-3. Execute `POST /api/simulations/run-demo?seed=42`.
-4. Capture each screen in the table above.
-
-## Alt-text / caption guidance for docs
-
-When embedding screenshots in markdown, use captions that reinforce responsible claims:
-
-- ✅ “Synthetic demo risk score with SHAP feature contributions.”
-- ✅ “Analyst review queue in local portfolio environment.”
-- ❌ “Live fraud prevention dashboard for banking customers.”
-
-## Maintenance note
-
-If UI changes significantly, refresh screenshots and update README references in the same PR/commit.
+2. Log in with demo credentials.
+3. Trigger `POST /api/simulations/run-demo?seed=42`.
+4. Capture each screen listed in the inventory.

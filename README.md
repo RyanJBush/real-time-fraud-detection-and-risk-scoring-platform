@@ -1,87 +1,52 @@
 # Meridian — Real-Time Fraud Detection Platform
 
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
-![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
-![SHAP](https://img.shields.io/badge/SHAP-Explainability-blueviolet?style=flat)
+A portfolio demo of a fraud-scoring workflow built with synthetic transaction streams.
 
-**Portfolio project:** full-stack fraud-risk scoring workflow using **synthetic/sample transaction data only**.
+## Recruiter-facing summary
+Meridian is a full-stack fraud-operations simulation that shows how a transaction can move from intake to risk scoring to analyst review. The project is designed for portfolio review and technical interviews, with clear documentation and reproducible local setup. University of Maryland student studying Information Science and Electrical Engineering with a Business minor.
 
-> ⚠️ Responsible use: Meridian is a learning and portfolio system, not a production fraud-prevention product. It does not process real banking data, cardholder data, or live payment traffic.
+> **Data disclaimer:** Uses synthetic transaction data — not real banking data. The model is trained and evaluated on synthetic/sample datasets and is not connected to production financial systems.
 
-## Why this project (recruiter-friendly)
+## What this project demonstrates
+- Designing a fraud-risk decision pipeline for demo-scale FinTech workflows
+- Combining rule-based signals with ML probability outputs for case triage
+- Exposing explainability outputs for analyst review using implemented SHAP calls
+- Building a local full-stack app with API docs, seeded scenarios, and review queue flows
 
-Meridian showcases capabilities aligned with FinTech, ML, backend, and data-science roles:
+## Tech stack
+- **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL
+- **Frontend:** React, TypeScript, Vite
+- **ML/Data:** scikit-learn, pandas, NumPy, SHAP
+- **Dev tooling:** Docker, Docker Compose, pytest, Makefile
 
-- **FinTech workflows:** transaction intake, risk scoring, analyst review queue, and audit-friendly reasoning.
-- **Applied ML in product context:** shared feature extraction between live scoring and offline evaluation.
-- **Backend engineering:** FastAPI routers, auth/RBAC, persistence, job orchestration, and test coverage.
-- **Data science communication:** transparent metrics, limitations, and explainability outputs.
+## Architecture overview
+- Architecture docs: [`docs/architecture.md`](docs/architecture.md)
+- API docs and endpoint behavior: [`docs/api.md`](docs/api.md)
 
-## Fraud scoring workflow
+High-level flow:
+1. Ingest synthetic transaction event
+2. Engineer risk features
+3. Score with rules + logistic regression baseline
+4. Return fraud score, decision band, and explanation metadata
+5. Route high-risk items to analyst review queue
 
-1. **Ingest transaction** via `POST /api/transactions`.
-2. **Extract features** (`amount`, high-amount flag, risky-country flag, merchant-risk flag).
-3. **Run hybrid score**:
-   - Rule signals
-   - Logistic regression baseline probability
-4. **Assign decision band** (`approve`, `review`, `decline`) with reason codes.
-5. **Persist score trace** for investigation and reporting.
-6. **Fetch explainability** from `GET /api/explanations/{transaction_id}` for top contributing factors.
-
-See implementation notes in `backend/app/ml.py`, `backend/app/routers/scores.py`, and `backend/app/routers/explanations.py`.
-
-## Review queue workflow
-
-Human-in-the-loop operations are centered in the review endpoints:
-
-- `GET /api/reviews/queue` for pending/resolved cases
-- `POST /api/reviews/{transaction_id}/assign` to assign ownership
-- `POST /api/reviews/{transaction_id}/decision` to record analyst outcome
-- `GET /api/reviews/{transaction_id}/history` for audit timeline
-
-This models analyst triage behavior and decision governance in a portfolio-safe environment.
-
-## Explainability view
-
-Explainability claims are intentionally scoped to what is implemented:
-
-- SHAP-based feature contributions are exposed for transaction explanations.
-- API returns top factors and directional impact for analyst interpretation.
-- Narrative output supports decision review, not regulatory-grade documentation.
-
-No claims are made beyond the implemented explainability endpoints/UI.
-
-## Model evaluation
-
-Meridian includes offline and API-visible evaluation paths for **illustrative** performance analysis:
-
-- Precision, recall, F1, ROC-AUC, Brier score
-- Confusion matrix views
-- Cost-sensitive framing for false negatives vs false positives
-
-All evaluation results are derived from synthetic labels and must not be interpreted as production performance.
-
-## Local demo setup
-
+## How to run locally
 ### Prerequisites
 - Docker + Docker Compose
-- (Optional for local dev) Python 3.11+, Node.js 20+
+- Optional local development tools: Python 3.11+, Node.js 20+
 
-### Run with Docker
-
+### Start the app
 ```bash
 docker compose up --build
 ```
 
 - Frontend: `http://localhost:5173`
-- Backend docs: `http://localhost:8000/docs`
+- Backend Swagger UI: `http://localhost:8000/docs`
 
-### Seed demo transactions
-
+## Demo workflow
+1. Launch services with Docker Compose.
+2. Authenticate with the seeded admin account.
+3. Trigger deterministic simulation data:
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H 'Content-Type: application/json' \
@@ -90,31 +55,28 @@ TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
 curl -X POST "http://localhost:8000/api/simulations/run-demo?seed=42" \
   -H "Authorization: Bearer $TOKEN"
 ```
+4. Review dashboard KPIs, queue operations, transaction detail view, and explanation output.
 
-### Helpful docs
-- Architecture: `docs/architecture.md`
-- API reference: `docs/api.md`
-- Demo walkthrough: `docs/demo-runbook.md`
-- Resume bullets: `docs/resume-bullets.md`
-- Screenshot guide: `docs/screenshots/README.md`
+## Screenshots / demo
+See screenshot inventory and capture guidance in [`docs/screenshots/README.md`](docs/screenshots/README.md).
+
+For a recruiter-friendly UI walkthrough, open the Portfolio Preview page:
+- [`docs/preview/index.html`](docs/preview/index.html) (Portfolio Preview)
 
 ## Limitations and future work
-
 ### Current limitations
-- Synthetic/sample transactions only; no real banking integrations.
-- Baseline model architecture intended for demonstration, not production hardening.
-- Limited feature set and constrained scenario realism.
-- Explainability centered on implemented SHAP flow only.
+- Uses synthetic/sample transaction data only; no real institution integrations
+- Demo-scale modeling and scenario realism; not validated for operational deployment
+- Limited feature space compared with production anti-fraud stacks
 
 ### Future work
-- Add richer synthetic behavior simulation (device, velocity, graph features).
-- Expand model registry/versioning and drift monitoring.
-- Add calibration dashboards and threshold policy simulation.
-- Add role-specific case-management UX for ops leadership views.
+- Expand synthetic behavior modeling (velocity, device, graph/network signals)
+- Add threshold simulation and calibration views for policy tuning
+- Improve model registry/versioning and drift-monitoring workflow
+- Extend case-management UX for role-specific operations
 
-## Responsible-use statement
+## Resume bullets
+- Project-specific resume bullets: [`docs/resume-bullets.md`](docs/resume-bullets.md)
 
-- This repository must only be used with synthetic/demo data.
-- Do not present this system as a deployed fraud-prevention platform.
-- Do not claim real loss prevention, customer protection outcomes, or compliance certification.
-- Keep evaluation claims bounded to reproducible synthetic experiments.
+## License
+This project is licensed under the terms in [`LICENSE`](LICENSE).
