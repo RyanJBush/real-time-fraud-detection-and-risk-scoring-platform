@@ -1,5 +1,15 @@
 # API Surface
 
+> Meridian is a portfolio project running against **synthetic data only**.
+> Every endpoint below is for local / demo use — none of this is wired to a
+> real payment network. Pair this reference with the live Swagger UI at
+> `http://localhost:8000/docs`.
+
+All non-auth endpoints expect a `Authorization: Bearer <JWT>` header. Obtain
+the JWT from `POST /api/auth/login`. Sensitive routes (rules management,
+simulation seeding) additionally check the role encoded in the JWT
+(Admin / Analyst / Reviewer / Viewer).
+
 ## Auth
 - `POST /api/auth/login`
 - `GET /api/auth/me`
@@ -38,6 +48,8 @@
 
 ## Simulations
 - `POST /api/simulations/seed-scenarios`
+- `POST /api/simulations/stream`
+- `POST /api/simulations/run-demo?seed=42` (one-click demo dataset — generates and scores card testing, geo attack, takeover, bot, and stolen-card scenarios)
 
 ## Offline Model Evaluation
 - `GET /api/models/evaluation` (candidate model comparison with threshold tuning, class-imbalance-aware training, calibration via Brier score, and cost-sensitive scoring)
@@ -51,4 +63,5 @@
 - `POST /api/rules` (Admin)
 - `PATCH /api/rules/{rule_id}` (Admin)
 
-Use `/docs` on the backend server for Swagger UI.
+Use `/docs` on the backend server for Swagger UI, or `/redoc` for the ReDoc
+variant.

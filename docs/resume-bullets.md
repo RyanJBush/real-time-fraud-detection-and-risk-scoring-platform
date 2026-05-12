@@ -4,6 +4,11 @@ ATS-friendly, one-line variants. Pick 3–4 that match the target role and drop
 into the **Projects** section. Numbers reference behavior on the synthetic
 dataset; reword honestly for any role-specific claims.
 
+> **Honesty note:** Meridian is a portfolio project running on synthetic data.
+> Do not phrase bullets in a way that implies real customers, real fraud loss
+> prevented, or production deployment. The "Tips for tailoring" section at the
+> bottom gives interview-safe wording.
+
 ## Short bullets (one line each)
 
 - Built a real-time fraud-scoring FastAPI service with a hybrid rules + scikit-learn classifier, SHAP-based top-risk-factor explanations, and per-request decision auditing.
