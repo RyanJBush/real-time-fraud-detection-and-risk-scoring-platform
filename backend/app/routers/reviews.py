@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.ml import MODEL_VERSION
 from app.models import DecisionTrace, ReviewCase, ReviewEvent, RiskScore, Transaction, TransactionLabel, User
 from app.schemas import (
     MarkFraudRequest,

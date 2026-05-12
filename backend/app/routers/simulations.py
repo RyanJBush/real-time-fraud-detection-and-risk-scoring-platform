@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db import get_db, engine
+from app.db import get_db
 from app.ml import MODEL_VERSION, extract_features, score_transaction
 from app.models import DecisionTrace, ReviewCase, RiskScore, Transaction, TransactionLabel
 from app.schemas import (

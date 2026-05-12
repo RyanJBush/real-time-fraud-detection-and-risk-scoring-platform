@@ -6,6 +6,7 @@ All route logic lives in app/routers/.
 """
 import json
 import logging
+import os
 import time
 import uuid
 
@@ -13,10 +14,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from app.db import Base, engine, get_db
+from app.db import Base, engine
 from app.models import Rule, User
+from app.routers import auth, audit, cases, explanations, jobs, metrics, reviews, scores, simulations, transactions
 from app.security import get_password_hash
-from app.routers import auth, transactions, scores, explanations, reviews, simulations, metrics, audit, jobs, cases
 
 app = FastAPI(title="Meridian AI API", version="0.2.0")
 logger = logging.getLogger("meridian.api")
@@ -25,7 +26,6 @@ logging.basicConfig(level=logging.INFO)
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-import os
 
 _ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"

@@ -145,8 +145,51 @@ make check   # backend lint + tests + frontend lint + typecheck + build
 ```
 backend/    FastAPI API, fraud scoring engine, SHAP explainability, review workflow, tests
 frontend/   Analyst console UI
-docs/       Architecture diagram, API reference, demo walkthrough
+data/       Synthetic transaction CSVs for offline training/evaluation (no real data)
+scripts/    Synthetic dataset generator + standalone offline training/evaluation script
+docs/       Architecture diagram, API reference, demo walkthrough, resume bullets
 ```
+
+---
+
+## 🧪 Offline Training & Evaluation
+
+The live FastAPI service ships with a hybrid rules + ML scorer. For reproducible
+offline experiments you can also train and evaluate the classifier directly
+against a synthetic CSV — using the same feature extractor the API uses:
+
+```bash
+# 1. Generate a deterministic synthetic dataset (~7% fraud rate)
+python scripts/generate_synthetic_dataset.py --rows 5000 --out data/synthetic_transactions.csv
+
+# 2. Train and evaluate (logistic regression baseline)
+python scripts/train_offline_model.py --data data/synthetic_transactions.csv
+```
+
+The training script prints precision, recall, F1, ROC-AUC, a confusion matrix,
+and the model's top risk factors (ranked by coefficient magnitude). See
+[`docs/resume-bullets.md`](docs/resume-bullets.md) for ATS-friendly bullets and
+[`data/README.md`](data/README.md) for the dataset schema.
+
+---
+
+## ⚠️ Limitations & Responsible-Use Note
+
+- **Synthetic data is not real fraud data.** The included generator hand-codes
+  fraud signatures (high amount, risky merchant, risky country). Real bank
+  fraud involves device fingerprints, velocity patterns, behavioral biometrics,
+  and adversarial drift that this dataset cannot capture. Any precision/recall/
+  AUC number from `data/synthetic_transactions.csv` is illustrative, not a claim
+  about production performance.
+- **Not deployed, not production-grade.** This is a portfolio project. There is
+  no real customer traffic, no PII, no regulated data, and no SOC2 / PCI
+  posture. Demo credentials are seeded in plain text on first launch.
+- **Models are baselines.** Logistic regression and random forest are used to
+  keep the training loop fast and dependency-light. A real system would invest
+  in feature engineering, drift monitoring, and continuous retraining.
+- **No cross-border / regulatory handling.** Production fraud systems need
+  jurisdiction-aware rules, sanctions screening (OFAC etc.), and a model risk
+  governance process (SR 11-7-style review). None of that is implemented here.
 
 ---
 

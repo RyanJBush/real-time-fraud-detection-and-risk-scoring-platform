@@ -1,28 +1,21 @@
 import json
 
-from fastapi import APIRouter, Depends
-from fastapi import BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db import get_db, engine
-from app.models import BackgroundJob
+from app.db import engine, get_db
+from app.models import BackgroundJob, FeatureSnapshot, Transaction
 from app.schemas import (
     BackgroundJobListResponse,
     BackgroundJobOut,
     FeatureRefreshResponse,
     FeatureSnapshotOut,
-    JobRetryResponse,
     JobSummaryResponse,
 )
 from app.security import require_roles
 from app.services.audit import write_audit_log
 from app.services.feature_service import refresh_recent_feature_snapshots, upsert_feature_snapshot
 from app.services.jobs import create_job, job_summary, set_job_status
-from app.models import FeatureSnapshot, Transaction
-from app.schemas import FeatureSnapshotOut
-from fastapi import HTTPException
-from app.security import get_current_user
-from app.models import User
 
 router = APIRouter(prefix="/api", tags=["jobs"])
 
