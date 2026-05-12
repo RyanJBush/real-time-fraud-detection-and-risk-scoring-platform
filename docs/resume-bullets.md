@@ -1,8 +1,8 @@
 # Resume Bullets — Meridian
 
-- Built a FastAPI + React fraud-operations portfolio demo that scores synthetic transactions and routes flagged events to an analyst review queue.
-- Implemented hybrid risk scoring by combining rule signals with logistic regression probabilities to generate fraud scores and decision bands.
-- Developed feature-engineering and scoring services in Python with PostgreSQL persistence for transaction, score, and review-case records.
-- Integrated SHAP-based explanation outputs to surface top feature contributions for investigator-facing transaction detail views.
-- Designed deterministic simulation workflows to seed repeatable synthetic fraud scenarios for local demos and technical interviews.
-- Documented architecture, API behavior, limitations, and responsible-use guidance to keep project claims accurate and recruiter-friendly.
+- Built Meridian, a portfolio-scale fraud detection demo that scores **synthetic** card-like transactions with a FastAPI backend and React frontend.
+- Implemented a reproducible offline ML workflow: generated synthetic labeled data, extracted risk features, and trained/evaluated a logistic regression baseline with ROC-AUC and confusion-matrix reporting.
+- Engineered scoring features from transaction attributes (amount, merchant category patterns, country risk patterns) to mirror practical fraud-signal design choices.
+- Combined model probability and rule-based indicators into decision bands used to route higher-risk events into an analyst review queue.
+- Added transaction-level explanation outputs (SHAP contribution values + top factors) to support interpretable scoring discussions during demos.
+- Documented architecture, API behavior, and synthetic-data limitations to keep technical claims accurate and recruiter-friendly.
