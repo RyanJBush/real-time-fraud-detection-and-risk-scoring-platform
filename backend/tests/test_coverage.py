@@ -27,7 +27,7 @@ from app.models import (
     Transaction,
     TransactionLabel,
 )
-from app.security import create_access_token, get_password_hash, verify_password
+from app.security import SECRET_KEY, create_access_token, get_password_hash, verify_password
 from app.services.ai_assist import generate_group_summary, generate_review_suggestion
 from app.services.analytics import build_case_groups, build_trend_summary
 from app.services.feature_service import compute_transaction_features
@@ -97,7 +97,7 @@ def test_create_access_token_returns_decodable_jwt() -> None:
 
     token = create_access_token("user@example.com")
     assert isinstance(token, str)
-    payload = jose_jwt.decode(token, "dev-secret", algorithms=["HS256"])
+    payload = jose_jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
     assert payload["sub"] == "user@example.com"
     assert "exp" in payload
 
