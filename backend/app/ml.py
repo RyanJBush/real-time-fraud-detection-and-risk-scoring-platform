@@ -13,6 +13,7 @@ _X = np.array([[30,0,0,0],[120,0,0,0],[900,0,0,1],[4500,1,0,1],[80,0,1,0],[14000
 _y = np.array([0,0,1,1,1,1])
 MODEL_A = LogisticRegression(max_iter=500).fit(_X, _y)
 MODEL_B = RandomForestClassifier(n_estimators=120, max_depth=6, random_state=7).fit(_X, _y)
+MODEL = MODEL_A  # default model alias for compatibility
 
 
 def extract_features(amount: float, country: str, merchant: str) -> np.ndarray:
