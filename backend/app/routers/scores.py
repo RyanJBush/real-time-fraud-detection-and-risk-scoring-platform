@@ -20,11 +20,12 @@ from app.models import (
     Transaction,
     User,
 )
-from app.schemas import ScoreOut, ScoreRequest
+from app.schemas import ABScoreOut, DriftResponse, ScoreOut, ScoreRequest
 from app.security import get_current_user, require_roles
 from app.services.audit import write_audit_log
 from app.services.fraud_engine import APPROVE_THRESHOLD_MAX, REVIEW_THRESHOLD_MAX, evaluate_hybrid_decision
 from app.services.review_workflow import record_review_event, upsert_review_case
+from app.services.drift_detection import DriftDetector
 
 router = APIRouter(prefix="/api", tags=["scores"])
 
@@ -162,3 +163,27 @@ def get_score(
         threshold_review_max=REVIEW_THRESHOLD_MAX,
         confidence_score=_decision_confidence(row.final_score),
     )
+
+
+@router.post("/score/ab", response_model=ABScoreOut, dependencies=[Depends(require_roles("Admin", "Analyst"))])
+def score_ab(payload: ScoreRequest, db: Session = Depends(get_db)) -> ABScoreOut:
+    tx = db.query(Transaction).filter(Transaction.id == payload.transaction_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    features = extract_features(tx.amount, tx.country, tx.merchant)
+    model_a_score = score_transaction(features, model_slot="model_a")
+    model_b_score = score_transaction(features, model_slot="model_b")
+    model_a_shap, _ = shap_explanation(features, model_slot="model_a")
+    model_b_shap, _ = shap_explanation(features, model_slot="model_b")
+    return ABScoreOut(
+        transaction_id=tx.id,
+        model_a={"prediction": int(model_a_score >= 0.5), "confidence": model_a_score, "shap_values": model_a_shap},
+        model_b={"prediction": int(model_b_score >= 0.5), "confidence": model_b_score, "shap_values": model_b_shap},
+    )
+
+
+@router.get("/monitoring/drift", response_model=DriftResponse, dependencies=[Depends(require_roles("Admin", "Analyst", "Reviewer", "Viewer"))])
+def monitoring_drift(db: Session = Depends(get_db)) -> DriftResponse:
+    detector = DriftDetector("backend/app/data/baseline_distributions.json")
+    features = detector.calculate(db)
+    return DriftResponse(features=features, has_alert=any(v["drift_alert"] for v in features.values()))

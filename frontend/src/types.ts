@@ -201,3 +201,9 @@ export interface DemoSimulationResponse {
   scenarios: Record<string, number>;
   example_case_ids: number[];
 }
+
+
+export interface DriftResponse {
+  features: Record<string, { psi: number; ks_pvalue: number; drift_alert: boolean }>;
+  has_alert: boolean;
+}

@@ -2,7 +2,8 @@ import { Area, AreaChart, CartesianGrid, Pie, PieChart, ResponsiveContainer, Too
 import { useEffect, useMemo, useState } from "react";
 
 import { KpiCard } from "../components/KpiCard";
-import { fetchMetricsSummary, fetchMetricsTrends, fetchReviewQueue, fetchTransactions } from "../services/api";
+import { ModelComparison } from "../components/ModelComparison";
+import { fetchDriftMonitoring, fetchMetricsSummary, fetchMetricsTrends, fetchModelEvaluation, fetchReviewQueue, fetchTransactions } from "../services/api";
 import type { MetricsSummary, ReviewQueueItem, Transaction, TrendSummary } from "../types";
 
 interface DashboardPageProps {
@@ -15,6 +16,8 @@ export function DashboardPage({ token }: DashboardPageProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [driftAlert, setDriftAlert] = useState<string | null>(null);
+  const [models, setModels] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,16 +25,20 @@ export function DashboardPage({ token }: DashboardPageProps) {
       try {
         setLoading(true);
         setError(null);
-        const [summaryPayload, trendPayload, txPayload, queuePayload] = await Promise.all([
+        const [summaryPayload, trendPayload, txPayload, queuePayload, driftPayload, modelEval] = await Promise.all([
           fetchMetricsSummary(token),
           fetchMetricsTrends(token),
           fetchTransactions(token, 1, 25),
           fetchReviewQueue(token, "pending"),
+          fetchDriftMonitoring(token),
+          fetchModelEvaluation(token),
         ]);
         setSummary(summaryPayload);
         setTrends(trendPayload);
         setTransactions(txPayload);
         setReviewQueue(queuePayload.items);
+        setDriftAlert(driftPayload.has_alert ? "⚠ Drift detected (PSI > 0.2)." : null);
+        setModels(modelEval.items.slice(0,2));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard metrics");
       } finally {
@@ -65,6 +72,7 @@ export function DashboardPage({ token }: DashboardPageProps) {
 
   return (
     <div className="page-grid">
+      {driftAlert && <p className="state error">{driftAlert}</p>}
       <section className="kpi-grid">
         <KpiCard label="Fraud Rate" value={`${(summary.fraud_rate * 100).toFixed(1)}%`} />
         <KpiCard label="Flagged Transactions" value={(summary.review + summary.declined).toLocaleString()} />
@@ -120,6 +128,8 @@ export function DashboardPage({ token }: DashboardPageProps) {
           </tbody>
         </table>
       </article>
+
+      <ModelComparison models={models} />
     </div>
   );
 }
