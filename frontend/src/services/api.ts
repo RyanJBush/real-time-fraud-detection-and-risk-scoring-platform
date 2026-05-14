@@ -16,6 +16,7 @@ import type {
   TransactionCreate,
   TransactionListResponse,
   TrendSummary,
+  DriftResponse,
   User,
 } from "../types";
 
@@ -70,3 +71,5 @@ export async function fetchModelEvaluation(token: string): Promise<ModelEvaluati
 export async function fetchCaseGroups(token: string, status = "all"): Promise<CaseGroupsResponse> { return handleResponse<CaseGroupsResponse>(await fetch(`${API_BASE}/cases/groups?status=${status}&limit=25`, { headers: { ...authHeaders(token) } })); }
 export async function fetchCaseSummary(token: string, groupKey: string): Promise<CaseSummary> { return handleResponse<CaseSummary>(await fetch(`${API_BASE}/cases/summary?group_key=${encodeURIComponent(groupKey)}`, { headers: { ...authHeaders(token) } })); }
 export function decisionToLabel(decision: RiskDecision): string { return decision === "approve" ? "Approve" : decision === "review" ? "Review" : "Decline"; }
+
+export async function fetchDriftMonitoring(token: string): Promise<DriftResponse> { return handleResponse<DriftResponse>(await fetch(`${API_BASE}/monitoring/drift`, { headers: { ...authHeaders(token) } })); }

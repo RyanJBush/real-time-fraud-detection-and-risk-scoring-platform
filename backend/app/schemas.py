@@ -319,3 +319,26 @@ class JobRetryResponse(BaseModel):
     retried_from_job_id: int
     new_job_id: int
     status: str
+
+
+class ABModelResult(BaseModel):
+    prediction: int
+    confidence: float
+    shap_values: dict[str, float]
+
+
+class ABScoreOut(BaseModel):
+    transaction_id: int
+    model_a: ABModelResult
+    model_b: ABModelResult
+
+
+class DriftFeatureStats(BaseModel):
+    psi: float
+    ks_pvalue: float
+    drift_alert: bool
+
+
+class DriftResponse(BaseModel):
+    features: dict[str, DriftFeatureStats]
+    has_alert: bool

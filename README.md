@@ -99,3 +99,12 @@ docker compose up --build
 
 ## License
 See [`LICENSE`](LICENSE).
+
+
+## Running the Demo
+1. Generate synthetic transactions:
+```bash
+python scripts/generate_synthetic_data.py
+```
+2. Load generated CSV from `data/synthetic_transactions.csv` into your analysis/training workflow.
+3. Start services with Docker Compose and run seeded simulation API calls for live scoring.
