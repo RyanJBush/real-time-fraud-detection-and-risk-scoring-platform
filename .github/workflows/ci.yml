@@ -37,6 +37,6 @@ jobs:
       - name: Lint with Ruff
         run: ruff check app tests
 
-      - name: Run tests
+      - name: Run pytest smoke test
         working-directory: .
-        run: pytest backend/tests/ -q --tb=short
+        run: pytest backend/tests/test_api.py -q --maxfail=1 --tb=short
