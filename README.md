@@ -1,72 +1,65 @@
-# Meridian — Portfolio-Scale Fraud Detection Demo
+# Real-Time Fraud Detection & Risk Scoring Platform
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-22c55e?style=for-the-badge)](https://fraud-detection.onrender.com)
+> **Portfolio project for data science, fintech, machine learning, and risk analytics roles.**
+> Uses synthetic/sample transaction data only (no real customer or banking data).
 
-> **Synthetic/sample transaction data only — not real banking data.**
+## Executive Summary
+This project demonstrates an end-to-end fraud detection and risk scoring platform built with a FastAPI backend, React frontend, PostgreSQL persistence, and a baseline machine learning model. It combines deterministic fraud rules with logistic-regression probability scoring, then routes higher-risk transactions into an analyst review workflow with audit history and explainability support. The repository is designed to showcase production-style architecture patterns and practical ML/risk operations workflows in a recruiter-friendly format while remaining explicitly demo-safe.
 
-Meridian is a portfolio project built by a **University of Maryland student studying Information Science and Electrical Engineering with a Business minor**. It demonstrates a realistic, student-scale fraud scoring workflow using synthetic transaction events, a baseline machine learning model, and analyst review tooling.
+## Business Problem and Fintech Use Case
+Digital payments and card-like transaction systems need fast risk decisions to reduce fraud exposure while minimizing false positives that disrupt legitimate users. This platform simulates that fintech use case by scoring incoming transactions, assigning decision bands (approve/review/decline), and supporting human-in-the-loop review for escalated items. It is intended to demonstrate how data science and software engineering components connect in a risk operations context using synthetic data.
 
-## Summary
-Meridian simulates how card-like transactions can be scored for fraud risk and routed for manual review through a batch processing pipeline with streaming simulation using generator patterns. The project is intended for technical interviews and portfolio review, not production financial operations.
+## Key Features
+- Real-time-style transaction intake and scoring via API endpoints.
+- Hybrid risk engine combining:
+  - rule-based fraud signals, and
+  - ML-based fraud probability (logistic regression baseline).
+- Transaction-level explainability endpoint for SHAP-style feature contributions.
+- Review queue operations: assignment, decisioning, suggestion support, and history.
+- Metrics and model-evaluation endpoints for classification reporting on synthetic labels.
+- Simulation endpoints for seeded scenarios and stream-like demo runs.
+- Role-based auth flow with JWT and route-level access control.
+- Audit and job/status endpoints for operational visibility.
 
-## What this demonstrates
-- Building a full-stack fraud operations demo (FastAPI + React + PostgreSQL).
-- Engineering fraud features from transaction fields such as amount, merchant type, and country.
-- Training and evaluating a baseline logistic regression classifier on synthetic labels.
-- Combining model output with rule-based signals for clearer triage decisions.
-- Returning SHAP-based feature contributions for per-transaction explanation views.
+## Tech Stack
+- **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL.
+- **Frontend:** React, TypeScript, Vite.
+- **ML/Data:** scikit-learn, pandas, NumPy, SHAP.
+- **Quality/Dev Tooling:** pytest, Ruff, Docker Compose, Makefile workflows.
 
-## Model behavior at a high level
-The training/scoring pipeline uses synthetic transaction records with fields like:
-- `amount`
-- `merchant`
-- `country`
-- derived risk indicators (for example high-amount and risky-merchant patterns)
+## Machine Learning / Risk Scoring Workflow
+1. Synthetic transaction data is generated and/or ingested.
+2. Feature extraction builds model inputs and risk indicators.
+3. Deterministic fraud rules compute explicit signal flags.
+4. Logistic regression baseline outputs fraud probability.
+5. Rules + model outputs are combined into decision bands.
+6. Score context is stored and exposed through scoring/explanation/review APIs.
+7. Offline evaluation reports classification metrics for synthetic-data benchmarking.
 
-The label is binary:
-- `is_fraud = 1` for synthetic fraud-pattern transactions
-- `is_fraud = 0` for synthetic legitimate-pattern transactions
+## Data Pipeline / Processing Flow
+- **Data creation:** scripts generate synthetic transaction records with controllable fraud-rate and seed settings.
+- **Offline modeling:** training script fits and evaluates the baseline model from CSV data.
+- **Online/demo scoring path:** transaction payload -> feature extraction -> scoring -> persistence -> review queue -> metrics/explanations.
+- **Simulation utilities:** scenario seeding and stream/demo endpoints support reproducible walkthroughs.
 
-The backend extracts numeric features and scores with a logistic regression baseline, then combines model signals with rules to produce decision bands used by the review queue.
+## Architecture Overview
+High-level system flow:
+1. **Frontend (React/TypeScript)** sends authenticated REST requests.
+2. **Backend (FastAPI)** orchestrates transactions, scoring, explainability, reviews, metrics, rules, cases, simulations, and jobs.
+3. **Services layer** performs fraud scoring, feature generation, model evaluation, drift checks, analytics, and workflow/audit logic.
+4. **Database layer (PostgreSQL + SQLAlchemy)** stores transactions, scores, rule state, and review history.
 
+Supporting documentation:
+- Architecture details: `docs/architecture.md`
+- API endpoint reference: `docs/api.md`
 
-## How it Works
-Meridian uses an offline-trained logistic regression model and deterministic fraud rules in a staged scoring flow. Transaction records are generated and ingested in mini-batches, then replayed in order to simulate stream-like behavior with Python generators. For each scored transaction, the API returns SHAP feature attributions so reviewers can see which inputs (for example amount, merchant risk, and country risk) pushed the score up or down, improving explainability during triage.
-
-## Model Performance
-The table below is an example placeholder for demo reporting metrics (values are illustrative):
-
-| Metric    | Example Value |
-|-----------|---------------|
-| Precision | 0.89          |
-| Recall    | 0.84          |
-| F1        | 0.86          |
-| AUC-ROC   | 0.92          |
-
-## Tech stack
-- **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL
-- **Frontend:** React, TypeScript, Vite
-- **ML/Data:** scikit-learn, pandas, NumPy, SHAP
-- **Dev tooling:** Docker Compose, pytest, Makefile
-
-## Architecture
-- System architecture: [`docs/architecture.md`](docs/architecture.md)
-- API behavior and endpoints: [`docs/api.md`](docs/api.md)
-
-High-level flow:
-1. Ingest synthetic transaction event.
-2. Generate fraud-related features.
-3. Score using rules + logistic regression baseline.
-4. Persist score, decision context, and explanation metadata.
-5. Route higher-risk items to analyst review workflows.
-
-## Running locally
+## Setup and Installation
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- (Optional) Docker + Docker Compose
+- Docker + Docker Compose (optional, for full stack run)
 
-### Quick start commands
+### Quick Start
 ```bash
 make install
 make synthetic-data
@@ -74,54 +67,38 @@ make train-demo
 make eval-demo
 ```
 
-What these do:
-- `make install`: installs backend and frontend dependencies.
-- `make synthetic-data`: generates a small synthetic CSV dataset.
-- `make train-demo`: trains/evaluates the offline logistic baseline.
-- `make eval-demo`: runs backend tests for scoring and pipeline checks.
-
-### Optional full app run
+### Run Full Application (Optional)
 ```bash
 docker compose up --build
 ```
 - Frontend: `http://localhost:5173`
-- API docs (Swagger): `http://localhost:8000/docs`
+- Backend API docs: `http://localhost:8000/docs`
 
-## Demo workflow
-1. Generate synthetic data and run the offline model demo.
-2. Start the app (`docker compose up --build`).
-3. Log in with seeded demo credentials.
-4. Trigger seeded simulation data through `POST /api/simulations/run-demo?seed=42`.
-5. Review dashboard KPIs, flagged transactions, and explanation output.
+## Example Use Cases
+- Demonstrate a **fraud scoring API** in technical interviews.
+- Show a **classification + rule-engine hybrid** risk decisioning approach.
+- Walk through **analyst review operations** (queue, assignment, decision history).
+- Discuss **model evaluation and threshold trade-offs** on synthetic data.
+- Explain **transaction-level risk reasoning** through explanation endpoints.
 
-## Screenshots
-- Add UI or workflow screenshots under [`docs/images/`](docs/images/) for README embedding and release notes.
-- Existing screenshot inventory and capture checklist: [`docs/screenshots/README.md`](docs/screenshots/README.md)
-- Portfolio Preview page: [`docs/preview/index.html`](docs/preview/index.html)
+## Skills Demonstrated
+- End-to-end ML application development (data generation, model training, inference integration).
+- Fraud/risk feature engineering and binary classification workflow design.
+- API design for scoring, explanations, metrics, and review operations.
+- Data pipeline thinking for batch/offline and near-real-time/demo paths.
+- Full-stack integration (FastAPI + React + PostgreSQL).
+- Testing and maintainability practices with pytest, linting, and modular services.
+- Security fundamentals (JWT authentication, role-based route access).
 
-## Limitations and future work
-### Current limitations
-- Synthetic/sample data only; no real customer accounts or banking integrations.
-- Portfolio-scale feature set and fraud patterns (not institution-tuned).
-- Baseline model scope and calibration are designed for demonstration.
+## Resume-Ready Project Description
+Built a full-stack **Real-Time Fraud Detection & Risk Scoring Platform** using Python (FastAPI), React, PostgreSQL, and scikit-learn. Implemented a hybrid risk engine that combines logistic-regression fraud probability with rule-based signals, exposed scoring/explanation/review APIs, and added synthetic-data simulation workflows for reproducible demos. Developed analyst-focused review queue and metrics endpoints to demonstrate practical machine learning operations, risk triage, and auditable decision workflows.
 
-### Future work
-- Add richer synthetic behavior simulation (velocity, device, graph link analysis).
-- Expand model comparison beyond logistic regression.
-- Add threshold calibration and drift monitoring views.
-- Improve analyst tooling for case prioritization experiments.
-
-## Resume bullets
-- Project resume bullets: [`docs/resume-bullets.md`](docs/resume-bullets.md)
+## Future Improvements
+- Add richer synthetic behavior patterns (velocity/device/graph-style relationships).
+- Expand model registry and side-by-side model comparison experiments.
+- Enhance threshold calibration and drift-monitoring UX.
+- Strengthen case-management workflows and prioritization logic.
+- Add deeper observability around model/feature freshness and job reliability.
 
 ## License
-See [`LICENSE`](LICENSE).
-
-
-## Running the Demo
-1. Generate synthetic transactions:
-```bash
-python scripts/generate_synthetic_data.py
-```
-2. Load generated CSV from `data/synthetic_transactions.csv` into your analysis/training workflow.
-3. Start services with Docker Compose and run seeded simulation API calls for live scoring.
+See `LICENSE`.
