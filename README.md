@@ -1,65 +1,72 @@
 # Real-Time Fraud Detection & Risk Scoring Platform
 
-> **Portfolio project for data science, fintech, machine learning, and risk analytics roles.**
-> Uses synthetic/sample transaction data only (no real customer or banking data).
+> Recruiter-ready portfolio project for data science, fintech, machine learning, and risk analytics roles.
+> Uses synthetic/sample transaction data only.
 
-## Executive Summary
-This project demonstrates an end-to-end fraud detection and risk scoring platform built with a FastAPI backend, React frontend, PostgreSQL persistence, and a baseline machine learning model. It combines deterministic fraud rules with logistic-regression probability scoring, then routes higher-risk transactions into an analyst review workflow with audit history and explainability support. The repository is designed to showcase production-style architecture patterns and practical ML/risk operations workflows in a recruiter-friendly format while remaining explicitly demo-safe.
+## 1) Project title
+Real-Time Fraud Detection & Risk Scoring Platform
 
-## Business Problem and Fintech Use Case
-Digital payments and card-like transaction systems need fast risk decisions to reduce fraud exposure while minimizing false positives that disrupt legitimate users. This platform simulates that fintech use case by scoring incoming transactions, assigning decision bands (approve/review/decline), and supporting human-in-the-loop review for escalated items. It is intended to demonstrate how data science and software engineering components connect in a risk operations context using synthetic data.
+## 2) Executive summary
+This project is an end-to-end fraud analytics platform with a FastAPI backend, React frontend, SQL persistence, and ML-assisted risk scoring. It combines a baseline classifier with deterministic fraud rules to produce transaction decisions (`approve`, `review`, `decline`), then supports analyst workflows through review queues, audit logs, and explanations. The repository is designed for interview/demo use with synthetic data and reproducible simulation flows.
 
-## Key Features
-- Real-time-style transaction intake and scoring via API endpoints.
-- Hybrid risk engine combining:
-  - rule-based fraud signals, and
-  - ML-based fraud probability (logistic regression baseline).
-- Transaction-level explainability endpoint for SHAP-style feature contributions.
-- Review queue operations: assignment, decisioning, suggestion support, and history.
-- Metrics and model-evaluation endpoints for classification reporting on synthetic labels.
-- Simulation endpoints for seeded scenarios and stream-like demo runs.
-- Role-based auth flow with JWT and route-level access control.
-- Audit and job/status endpoints for operational visibility.
+## 3) Business problem and fintech use case
+Digital payments teams need fast transaction risk decisions while controlling false positives that can block legitimate users. This project simulates that fintech workflow by ingesting transactions, calculating risk, routing high-risk cases to manual review, and tracking outcomes. It demonstrates how fraud detection, risk scoring, and analyst operations connect in a practical risk platform.
 
-## Tech Stack
-- **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL.
-- **Frontend:** React, TypeScript, Vite.
-- **ML/Data:** scikit-learn, pandas, NumPy, SHAP.
-- **Quality/Dev Tooling:** pytest, Ruff, Docker Compose, Makefile workflows.
+## 4) Key features
+- Transaction ingestion and scoring APIs for near-real-time decisioning.
+- Hybrid scoring engine:
+  - ML probability scoring (logistic regression baseline by default).
+  - Rule-based behavioral signals (velocity, repeat attempts, geo risk, merchant risk, high amount, and related anomaly-style proxies).
+- Decision trace persistence with reason codes and signal details.
+- Explainability endpoint with SHAP-based attributions (plus fallback attribution logic) and narrative summaries.
+- Review workflow: queue, assignment, comments, override decisions, fraud labeling, and case history.
+- Metrics and trends endpoints for fraud/risk monitoring from labeled synthetic records.
+- Candidate model evaluation endpoint (logistic regression, random forest, optional xgboost if available).
+- Simulation endpoints for seeded scenarios, stream-style generation, and full demo runs.
+- JWT authentication + role-based route protection (Admin/Analyst/Reviewer/Viewer).
+- Background jobs for feature snapshot refresh and job status tracking.
 
-## Machine Learning / Risk Scoring Workflow
-1. Synthetic transaction data is generated and/or ingested.
-2. Feature extraction builds model inputs and risk indicators.
-3. Deterministic fraud rules compute explicit signal flags.
-4. Logistic regression baseline outputs fraud probability.
-5. Rules + model outputs are combined into decision bands.
-6. Score context is stored and exposed through scoring/explanation/review APIs.
-7. Offline evaluation reports classification metrics for synthetic-data benchmarking.
+## 5) Tech stack
+- **Languages:** Python, TypeScript, JavaScript, SQL
+- **Backend:** FastAPI, SQLAlchemy, Pydantic
+- **Frontend:** React, Vite, Recharts
+- **Database:** PostgreSQL (Docker) or SQLite (local `.env` default)
+- **ML/Data:** scikit-learn, NumPy, SHAP
+- **Quality/Tooling:** pytest, Ruff, ESLint, TypeScript typecheck, Docker Compose, Makefile
 
-## Data Pipeline / Processing Flow
-- **Data creation:** scripts generate synthetic transaction records with controllable fraud-rate and seed settings.
-- **Offline modeling:** training script fits and evaluates the baseline model from CSV data.
-- **Online/demo scoring path:** transaction payload -> feature extraction -> scoring -> persistence -> review queue -> metrics/explanations.
-- **Simulation utilities:** scenario seeding and stream/demo endpoints support reproducible walkthroughs.
+## 6) Machine learning / risk scoring workflow
+1. Generate or ingest synthetic transaction records.
+2. Extract model features (`amount`, high-amount flag, risky-country flag, merchant-risk flag) and transaction context used by rule signals.
+3. Score fraud probability with the baseline classifier.
+4. Compute rule-based risk signals (including velocity and anomaly-proxy behaviors).
+5. Combine model score + rule score into a final risk score.
+6. Map final score into decision bands (`approve`, `review`, `decline`) with stored reason codes.
+7. Persist score, explanation artifacts, and decision trace for API/UI consumption.
+8. Evaluate candidate models and threshold trade-offs on labeled synthetic data.
 
-## Architecture Overview
-High-level system flow:
-1. **Frontend (React/TypeScript)** sends authenticated REST requests.
-2. **Backend (FastAPI)** orchestrates transactions, scoring, explainability, reviews, metrics, rules, cases, simulations, and jobs.
-3. **Services layer** performs fraud scoring, feature generation, model evaluation, drift checks, analytics, and workflow/audit logic.
-4. **Database layer (PostgreSQL + SQLAlchemy)** stores transactions, scores, rule state, and review history.
+## 7) Data pipeline or processing flow
+- **Synthetic data generation:** `scripts/generate_synthetic_transactions.py` and related generators create reproducible datasets.
+- **Offline model workflow:** `scripts/train_offline_model.py` trains/evaluates a classifier from CSV and reports classification metrics.
+- **Online scoring flow:** API transaction -> feature extraction -> hybrid scoring -> DB persistence -> review queue + explanations.
+- **Simulation flow:** scenario seeding and demo-run endpoints populate and score realistic fraud patterns for walkthroughs.
 
-Supporting documentation:
-- Architecture details: `docs/architecture.md`
-- API endpoint reference: `docs/api.md`
+## 8) Architecture overview
+- **Frontend (React/TypeScript):** dashboard, transaction feed/detail, review queue, and intelligence/simulation pages.
+- **API layer (FastAPI routers):** auth, transactions, scores, explanations, metrics, reviews, simulations, cases, rules, audit, and jobs.
+- **Service layer:** fraud engine, model evaluation, trend analytics, drift detection, review workflow, feature snapshot jobs.
+- **Persistence layer (SQLAlchemy):** transactions, risk scores, decision traces, explanations, labels, review cases/events, audit logs, background jobs.
 
-## Setup and Installation
+Detailed references:
+- `docs/architecture.md`
+- `docs/api.md`
+
+## 9) Setup and installation
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- Docker + Docker Compose (optional, for full stack run)
+- Docker + Docker Compose (optional full-stack run)
 
-### Quick Start
+### Quick start (local tooling)
 ```bash
 make install
 make synthetic-data
@@ -67,38 +74,38 @@ make train-demo
 make eval-demo
 ```
 
-### Run Full Application (Optional)
+### Run full stack (optional)
 ```bash
 docker compose up --build
 ```
 - Frontend: `http://localhost:5173`
-- Backend API docs: `http://localhost:8000/docs`
+- Backend docs: `http://localhost:8000/docs`
 
-## Example Use Cases
-- Demonstrate a **fraud scoring API** in technical interviews.
-- Show a **classification + rule-engine hybrid** risk decisioning approach.
-- Walk through **analyst review operations** (queue, assignment, decision history).
-- Discuss **model evaluation and threshold trade-offs** on synthetic data.
-- Explain **transaction-level risk reasoning** through explanation endpoints.
+## 10) Example use cases
+- Demo a fraud-scoring API workflow in interviews.
+- Show a hybrid classification + rule-based decisioning approach for risk ops.
+- Walk through analyst case management (assignment, override, fraud labeling, history).
+- Compare model candidates and discuss threshold/cost trade-offs.
+- Explain transaction-level risk drivers using contribution outputs and reason codes.
 
-## Skills Demonstrated
-- End-to-end ML application development (data generation, model training, inference integration).
-- Fraud/risk feature engineering and binary classification workflow design.
-- API design for scoring, explanations, metrics, and review operations.
-- Data pipeline thinking for batch/offline and near-real-time/demo paths.
-- Full-stack integration (FastAPI + React + PostgreSQL).
-- Testing and maintainability practices with pytest, linting, and modular services.
-- Security fundamentals (JWT authentication, role-based route access).
+## 11) Skills demonstrated
+- Fraud/risk analytics design and feature engineering.
+- Binary classification modeling and model evaluation.
+- Hybrid risk scoring (ML + rules) with explainability outputs.
+- Real-time-style API development for scoring and review operations.
+- Data pipeline design across synthetic generation, offline training, and online inference.
+- Full-stack product implementation (FastAPI + React + SQL database).
+- Security and governance fundamentals (JWT auth, RBAC, auditability).
 
-## Resume-Ready Project Description
-Built a full-stack **Real-Time Fraud Detection & Risk Scoring Platform** using Python (FastAPI), React, PostgreSQL, and scikit-learn. Implemented a hybrid risk engine that combines logistic-regression fraud probability with rule-based signals, exposed scoring/explanation/review APIs, and added synthetic-data simulation workflows for reproducible demos. Developed analyst-focused review queue and metrics endpoints to demonstrate practical machine learning operations, risk triage, and auditable decision workflows.
+## 12) Resume-ready project description
+Built a full-stack **Real-Time Fraud Detection & Risk Scoring Platform** using **Python (FastAPI), React, SQLAlchemy/PostgreSQL, and scikit-learn**. Implemented a hybrid risk engine that combines ML classification scores with rule-based fraud signals, exposed scoring/review/explainability APIs, and delivered simulation-driven workflows for reproducible demos. Added analyst-facing dashboards, case triage operations, and model-evaluation endpoints to demonstrate practical fintech risk analytics and ML system design.
 
-## Future Improvements
-- Add richer synthetic behavior patterns (velocity/device/graph-style relationships).
-- Expand model registry and side-by-side model comparison experiments.
-- Enhance threshold calibration and drift-monitoring UX.
-- Strengthen case-management workflows and prioritization logic.
-- Add deeper observability around model/feature freshness and job reliability.
+## 13) Future improvements
+- Add richer synthetic fraud patterns (device/network/graph relationships).
+- Expand drift monitoring and threshold calibration workflows.
+- Add stricter model registry/versioning and experiment tracking.
+- Improve case prioritization and SLA-style queue policies.
+- Extend observability for feature freshness and background job reliability.
 
 ## License
 See `LICENSE`.
