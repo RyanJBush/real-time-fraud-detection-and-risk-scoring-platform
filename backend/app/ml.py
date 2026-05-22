@@ -32,7 +32,8 @@ def shap_explanation(features: np.ndarray, model_slot: str = "model_a") -> tuple
         if model_slot == "model_a":
             explainer = shap.LinearExplainer(model, _X)
             values = explainer.shap_values(features)
-            if isinstance(values, list): values = values[0]
+            if isinstance(values, list):
+                values = values[0]
             vals = np.array(values).astype(float)
         else:
             explainer = shap.TreeExplainer(model)

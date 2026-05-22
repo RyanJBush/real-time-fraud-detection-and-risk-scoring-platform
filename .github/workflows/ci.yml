@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend-ci:
-    name: Ruff + Pytest smoke
+    name: Ruff + Pytest
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,5 +37,6 @@ jobs:
       - name: Lint with Ruff
         run: ruff check app tests
 
-      - name: Pytest smoke test
-        run: pytest -q -k "smoke or api or services" --maxfail=1
+      - name: Run tests
+        working-directory: .
+        run: pytest backend/tests/ -q --tb=short
