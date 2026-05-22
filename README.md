@@ -36,7 +36,7 @@ Digital payments teams need fast transaction risk decisions while controlling fa
 
 ## 6) Machine learning / risk scoring workflow
 1. Generate or ingest synthetic transaction records.
-2. Extract model features (`amount`, high-amount flag, risky-country flag, merchant-risk flag).
+2. Extract model features (`amount`, high-amount flag, risky-country flag, merchant-risk flag) and transaction context used by rule signals.
 3. Score fraud probability with the baseline classifier.
 4. Compute rule-based risk signals (including velocity and anomaly-proxy behaviors).
 5. Combine model score + rule score into a final risk score.
