@@ -1,11 +1,13 @@
 # Meridian — Portfolio-Scale Fraud Detection Demo
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-22c55e?style=for-the-badge)](https://fraud-detection.onrender.com)
+
 > **Synthetic/sample transaction data only — not real banking data.**
 
 Meridian is a portfolio project built by a **University of Maryland student studying Information Science and Electrical Engineering with a Business minor**. It demonstrates a realistic, student-scale fraud scoring workflow using synthetic transaction events, a baseline machine learning model, and analyst review tooling.
 
 ## Summary
-Meridian simulates how card-like transactions can be scored for fraud risk and routed for manual review. The project is intended for technical interviews and portfolio review, not production financial operations.
+Meridian simulates how card-like transactions can be scored for fraud risk and routed for manual review through a batch processing pipeline with streaming simulation using generator patterns. The project is intended for technical interviews and portfolio review, not production financial operations.
 
 ## What this demonstrates
 - Building a full-stack fraud operations demo (FastAPI + React + PostgreSQL).
@@ -26,6 +28,20 @@ The label is binary:
 - `is_fraud = 0` for synthetic legitimate-pattern transactions
 
 The backend extracts numeric features and scores with a logistic regression baseline, then combines model signals with rules to produce decision bands used by the review queue.
+
+
+## How it Works
+Meridian uses an offline-trained logistic regression model and deterministic fraud rules in a staged scoring flow. Transaction records are generated and ingested in mini-batches, then replayed in order to simulate stream-like behavior with Python generators. For each scored transaction, the API returns SHAP feature attributions so reviewers can see which inputs (for example amount, merchant risk, and country risk) pushed the score up or down, improving explainability during triage.
+
+## Model Performance
+The table below is an example placeholder for demo reporting metrics (values are illustrative):
+
+| Metric    | Example Value |
+|-----------|---------------|
+| Precision | 0.89          |
+| Recall    | 0.84          |
+| F1        | 0.86          |
+| AUC-ROC   | 0.92          |
 
 ## Tech stack
 - **Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL
@@ -79,7 +95,8 @@ docker compose up --build
 5. Review dashboard KPIs, flagged transactions, and explanation output.
 
 ## Screenshots
-- Screenshot inventory and capture checklist: [`docs/screenshots/README.md`](docs/screenshots/README.md)
+- Add UI or workflow screenshots under [`docs/images/`](docs/images/) for README embedding and release notes.
+- Existing screenshot inventory and capture checklist: [`docs/screenshots/README.md`](docs/screenshots/README.md)
 - Portfolio Preview page: [`docs/preview/index.html`](docs/preview/index.html)
 
 ## Limitations and future work
