@@ -1,6 +1,6 @@
 # Real-Time Fraud Detection & Risk Scoring Platform
 
-> Recruiter-ready portfolio project for data science, fintech, machine learning, and risk analytics roles.  
+> Recruiter-ready portfolio project for data science, fintech, machine learning, and risk analytics roles.
 > Uses synthetic/sample transaction data only.
 
 ## 1) Project title
